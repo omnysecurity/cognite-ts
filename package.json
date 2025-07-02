@@ -6,7 +6,7 @@
 	},
 	"private": true,
 	"description": "TypeScript tools and utilities for building applications on Cognite Data Fusion",
-	"license": "Apache-2.0",
+	"license": "Apache-2.0 (modified for redistribution)",
 	"type": "module",
 	"packageManager": "pnpm@10.12.0",
 	"engines": {
