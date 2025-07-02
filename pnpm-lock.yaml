@@ -62,7 +62,7 @@ importers:
     dependencies:
       '@azure/msal-node':
         specifier: ^3.6.1
-        version: 3.6.1
+        version: 3.6.2
       '@cognite/sdk':
         specifier: ^10.0.0
         version: 10.0.0
@@ -89,14 +89,33 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.0.10)
 
+  packages/helpers:
+    dependencies:
+      '@cognite/sdk':
+        specifier: ^10.0.0
+        version: 10.0.0
+    devDependencies:
+      eslint:
+        specifier: ^9.29.0
+        version: 9.29.0
+      prettier:
+        specifier: ^3.6.1
+        version: 3.6.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.0.10)
+
 packages:
 
-  '@azure/msal-common@15.7.1':
-    resolution: {integrity: sha512-a0eowoYfRfKZEjbiCoA5bPT3IlWRAdGSvi63OU23Hv+X6EI8gbvXCoeqokUceFMoT9NfRUWTJSx5FiuzruqT8g==}
+  '@azure/msal-common@15.8.0':
+    resolution: {integrity: sha512-gYqq9MsWT/KZh8iTG37DkGv+wgfllgImTMB++Z83qn75M5eZ0cMX5kSSXdJqHbFm1qxaYydv+2kiVyA9ksN9pA==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-node@3.6.1':
-    resolution: {integrity: sha512-ctcVz4xS+st5KxOlQqgpvA+uDFAa59CvkmumnuhlD2XmNczloKBdCiMQG7/TigSlaeHe01qoOlDjz3TyUAmKUg==}
+  '@azure/msal-node@3.6.2':
+    resolution: {integrity: sha512-lfZtncCSmKvW31Bh3iUBkeTf+Myt85YsamMkGNZ0ayTO5MirOGBgTa3BgUth0kWFBQuhZIRfi5B95INZ+ppkjw==}
     engines: {node: '>=16'}
 
   '@cognite/sdk-core@5.0.0':
@@ -1687,11 +1706,11 @@ packages:
 
 snapshots:
 
-  '@azure/msal-common@15.7.1': {}
+  '@azure/msal-common@15.8.0': {}
 
-  '@azure/msal-node@3.6.1':
+  '@azure/msal-node@3.6.2':
     dependencies:
-      '@azure/msal-common': 15.7.1
+      '@azure/msal-common': 15.8.0
       jsonwebtoken: 9.0.2
       uuid: 8.3.2
 
