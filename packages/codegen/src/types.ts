@@ -1,7 +1,7 @@
-import type { ViewCorePropertyDefinition } from "@cognite/sdk";
+import type { ViewCorePropertyDefinition } from '@cognite/sdk';
 
 export interface EnumType {
-	type: "enum";
+	type: 'enum';
 	values: Record<string, unknown>;
 }
 
@@ -19,7 +19,7 @@ export interface EnumType {
  */
 export type ExtendedViewCorePropertyDefinition = Omit<
 	ViewCorePropertyDefinition,
-	"type"
+	'type'
 > & {
-	type: ViewCorePropertyDefinition["type"] | EnumType;
+	type: ViewCorePropertyDefinition['type'] | EnumType;
 };

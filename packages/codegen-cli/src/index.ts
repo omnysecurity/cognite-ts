@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { CogniteClient } from '@cognite/sdk';
-import meow from 'meow';
 import { writeFile } from 'fs/promises';
-
+import { CogniteClient } from '@cognite/sdk';
 import { generate } from '@omnysecurity/cognite-codegen';
+import meow from 'meow';
+
 
 export const main = async (options: Options) => {
 	const client = new CogniteClient({
