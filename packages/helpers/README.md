@@ -25,9 +25,7 @@ const instances = client.instances.list({
 });
 
 // Extract data from response
-const listOfProperties = instances.map(
-	(instance) => helpers.getView('MyView').getProps
-);
+const listOfProperties = instances.map(helpers.getView('MyView').getProps);
 ```
 
 ## Features
