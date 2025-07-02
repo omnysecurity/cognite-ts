@@ -1,34 +1,34 @@
 {
-  "name": "@cognite/codegen",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Core TypeScript code generation library for Cognite Data Fusion data models",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
-    "lint": "eslint src/",
-    "format": "prettier --write src/"
-  },
-  "files": [
-    "dist/",
-    "src/"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "dependencies": {
-    "@cognite/sdk": "^10.0.0",
-    "typescript": "^5.8.3"
-  },
-  "devDependencies": {
-    "eslint": "^9.29.0",
-    "prettier": "^3.6.1",
-    "vitest": "^3.2.4"
-  }
+	"name": "@omnysecurity/cognite-codegen",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Core TypeScript code generation library for Cognite Data Fusion data models",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"test": "vitest run",
+		"lint": "eslint src/",
+		"format": "prettier --write src/"
+	},
+	"files": [
+		"dist/",
+		"src/"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
+	"dependencies": {
+		"@cognite/sdk": "^10.0.0",
+		"typescript": "^5.8.3"
+	},
+	"devDependencies": {
+		"eslint": "^9.29.0",
+		"prettier": "^3.6.1",
+		"vitest": "^3.2.4"
+	}
 }

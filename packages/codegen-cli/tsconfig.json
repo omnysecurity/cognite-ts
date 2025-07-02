@@ -1,19 +1,23 @@
 {
-	"extends": "../../tsconfig.json",
 	"compilerOptions": {
-		"outDir": "./dist",
-		"rootDir": "./src",
-		"module": "ESNext",
-		"target": "ES2020",
-		"moduleResolution": "bundler",
+		"target": "es2020",
+		"lib": ["es2022"],
+		"allowJs": true,
+		"skipLibCheck": true,
+		"experimentalDecorators": true,
+		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"lib": ["es2022", "dom"]
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "bundler",
+		"isolatedModules": true,
+		"strict": true,
+		"module": "es2020",
+		"strictBindCallApply": true,
+		"noFallthroughCasesInSwitch": false,
+		"baseUrl": "./",
+		"outDir": "./dist",
+		"declaration": true
 	},
-	"include": ["src/**/*"],
-	"exclude": ["dist", "node_modules", "**/*.test.ts"],
-	"references": [
-		{
-			"path": "../codegen"
-		}
-	]
+	"include": ["src"],
+	"exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }
