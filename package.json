@@ -6,6 +6,7 @@
 	},
 	"private": true,
 	"description": "TypeScript tools and utilities for building applications on Cognite Data Fusion",
+	"type": "module",
 	"packageManager": "pnpm@10.12.0",
 	"engines": {
 		"node": ">=22.0.0"
@@ -26,7 +27,9 @@
 		"@typescript-eslint/parser": "^8.35.0",
 		"eslint": "^9.29.0",
 		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-import": "^2.32.0",
 		"eslint-plugin-prettier": "^5.5.1",
+		"eslint-plugin-unused-imports": "^4.1.4",
 		"prettier": "^3.6.1",
 		"typescript": "^5.8.3",
 		"vitest": "^3.2.4"
