@@ -1,0 +1,34 @@
+{
+	"name": "cognite-ts",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/omnysecurity/cognite-ts.git"
+	},
+	"private": true,
+	"description": "TypeScript tools and utilities for building applications on Cognite Data Fusion",
+	"packageManager": "pnpm@10.12.0",
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"scripts": {
+		"build": "tsc && pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
+		"check": "pnpm --recursive --filter \"./packages/**/*\" exec tsc",
+		"test": "vitest --run",
+		"lint": "eslint",
+		"lint:fix": "pnpm lint --fix",
+		"format": "prettier --write \"**/*.{ts,tsx,md}\""
+	},
+	"workspaces": [
+		"packages/*"
+	],
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^8.35.0",
+		"@typescript-eslint/parser": "^8.35.0",
+		"eslint": "^9.29.0",
+		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-prettier": "^5.5.1",
+		"prettier": "^3.6.1",
+		"typescript": "^5.8.3",
+		"vitest": "^3.2.4"
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"name": "@cognite/codegen-cli",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Command-line interface for Cognite Data Fusion TypeScript code generation",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"bin": {
+		"cognite-codegen": "./dist/index.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"test": "vitest run",
+		"lint": "eslint src/",
+		"format": "prettier --write src/"
+	},
+	"files": [
+		"dist/",
+		"src/"
+	],
+	"dependencies": {
+		"@azure/msal-node": "^3.6.1",
+		"@cognite/codegen": "workspace:*",
+		"@cognite/sdk": "^10.0.0",
+		"meow": "^13.2.0",
+		"open": "^10.1.2"
+	},
+	"devDependencies": {
+		"eslint": "^9.29.0",
+		"prettier": "^3.6.1",
+		"typescript": "^5.8.3",
+		"vitest": "^3.2.4"
+	}
+}
