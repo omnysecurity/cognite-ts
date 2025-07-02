@@ -1,5 +1,5 @@
 {
-	"name": "cognite-ts",
+	"name": "@omnysecurity/cognite-ts",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/omnysecurity/cognite-ts.git"

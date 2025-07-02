@@ -1,5 +1,5 @@
 {
-	"name": "@cognite/codegen-cli",
+	"name": "@omnysecurity/cognite-codegen-cli",
 	"version": "0.0.0",
 	"private": true,
 	"description": "Command-line interface for Cognite Data Fusion TypeScript code generation",
@@ -21,12 +21,12 @@
 	],
 	"dependencies": {
 		"@azure/msal-node": "^3.6.1",
-		"@cognite/codegen": "workspace:*",
 		"@cognite/sdk": "^10.0.0",
-		"meow": "^13.2.0",
-		"open": "^10.1.2"
+		"@omnysecurity/cognite-codegen": "workspace:*",
+		"meow": "^13.2.0"
 	},
 	"devDependencies": {
+		"@types/node": "^24.0.10",
 		"eslint": "^9.29.0",
 		"prettier": "^3.6.1",
 		"typescript": "^5.8.3",
