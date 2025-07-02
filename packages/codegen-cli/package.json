@@ -12,7 +12,8 @@
 	"scripts": {
 		"build": "tsc",
 		"test": "vitest run",
-		"lint": "eslint src/",
+		"lint": "eslint 'src/**/*.{ts,tsx}'",
+		"lint:fix": "eslint 'src/**/*.{ts,tsx}' --fix",
 		"format": "prettier --write src/"
 	},
 	"files": [

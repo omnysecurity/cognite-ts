@@ -1,31 +1,41 @@
-import js from '@eslint/js';
-import typescript from '@typescript-eslint/eslint-plugin';
-import typescriptParser from '@typescript-eslint/parser';
-import prettier from 'eslint-plugin-prettier';
-import prettierConfig from 'eslint-config-prettier';
+import eslintPluginTs from '@typescript-eslint/eslint-plugin';
+import parserTypeScript from '@typescript-eslint/parser';
+import pluginImport from 'eslint-plugin-import';
+import pluginUnusedImports from 'eslint-plugin-unused-imports';
 
 export default [
-	js.configs.recommended,
 	{
-		files: ['**/*.{js,ts,tsx}'],
+		files: ['**/*.ts'],
 		languageOptions: {
-			parser: typescriptParser,
+			parser: parserTypeScript,
 			parserOptions: {
-				ecmaVersion: 'latest',
-				sourceType: 'module',
+				project: './tsconfig.json',
 			},
+			sourceType: 'module',
+			ecmaVersion: 'latest',
 		},
 		plugins: {
-			'@typescript-eslint': typescript,
-			prettier,
+			'@typescript-eslint': eslintPluginTs,
+			import: pluginImport,
+			'unused-imports': pluginUnusedImports,
 		},
 		rules: {
-			...typescript.configs.recommended.rules,
-			...prettierConfig.rules,
-			'prettier/prettier': 'error',
+			'unused-imports/no-unused-imports': 'error',
+			'import/order': [
+				'error',
+				{
+					groups: ['builtin', 'external', 'internal'],
+					alphabetize: { order: 'asc', caseInsensitive: true },
+				},
+			],
+			'@typescript-eslint/explicit-module-boundary-types': 'off',
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{
+					varsIgnorePattern: '^_',
+					argsIgnorePattern: '^_',
+				},
+			],
 		},
-	},
-	{
-		ignores: ['**/dist/**', '**/node_modules/**'],
 	},
 ];
