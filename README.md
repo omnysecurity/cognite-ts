@@ -8,8 +8,6 @@ TypeScript tools and utilities for building applications using the `@cognite/sdk
 - [@omnysecurity/cognite-codegen-cli](./packages/codegen-cli) - Command-line interface for Cognite Data Fusion TypeScript code generation
 - [@omnysecurity/cognite-helpers](./packages/helpers) - Enhanced TypeScript support for Cognite Data Fusion APIs
 
-## Usage
-
 ## Quick Start
 
 ### 1. Generate TypeScript Types from CDF Data Models
