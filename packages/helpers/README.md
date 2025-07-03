@@ -16,12 +16,12 @@ const helpers = new createHelpers<__Schema>(VIEW_DEFINITIONS);
 const f = new Filter(helpers);
 
 // Use helpers and filter instance to query data with ease
-const instances = client.instances.list({
-	sources: [helpers.getView('MyView').asSource()],
-	filter: f.and(
-		f.instance.equals('node', 'space', 'jam'),
-		f.equals('MyView', 'someProperty', 49)
-	),
+const instances = await client.instances.list({
+  sources: [helpers.getView('MyView').asSource()],
+    filter: f.and(
+      f.instance.equals('node', 'space', 'jam'),
+      f.equals('MyView', 'someProperty', 49)
+    ),
 });
 
 // Extract data from response
