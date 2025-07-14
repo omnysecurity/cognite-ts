@@ -6,7 +6,7 @@
 		"composite": true,
 		"downlevelIteration": true,
 		"resolveJsonModule": true,
-		"esModuleInterop": false,
+		"esModuleInterop": true,
 		"declaration": true,
 		"skipLibCheck": true,
 		"moduleResolution": "NodeNext",
@@ -26,10 +26,12 @@
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
-		"noUncheckedIndexedAccess": false,
+		"noUncheckedIndexedAccess": true,
 		"strictNullChecks": true,
 		"target": "ES2022",
 		"module": "NodeNext",
-		"incremental": true
+		"incremental": true,
+		"verbatimModuleSyntax": true,
+		"noImplicitOverride": true
 	}
 }
