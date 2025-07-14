@@ -1,11 +1,11 @@
-import { expect, describe, it } from 'vitest';
-import { Filter } from './filter';
 import type {
 	EqualsFilterV3,
 	TableExpressionFilterDefinition,
 } from '@cognite/sdk';
-
+import { expect, describe, it } from 'vitest';
 import { __VIEWS, type __Schema } from './_mock';
+import { Filter } from './filter';
+
 import { createHelpers } from './helpers';
 
 describe('Filter', () => {
