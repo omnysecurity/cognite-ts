@@ -1,22 +1,18 @@
 {
+	"extends": "../../tsconfig.json",
 	"compilerOptions": {
-		"target": "es2020",
-		"lib": ["es2022"],
 		"allowJs": true,
 		"skipLibCheck": true,
 		"experimentalDecorators": true,
-		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"forceConsistentCasingInFileNames": true,
 		"moduleResolution": "bundler",
-		"isolatedModules": true,
-		"strict": true,
-		"module": "es2020",
+		"module": "ESNext",
 		"strictBindCallApply": true,
 		"noFallthroughCasesInSwitch": false,
 		"baseUrl": "./",
-		"outDir": "./dist",
-		"declaration": true
+		"outDir": "dist",
+		"declaration": true,
+		"types": ["node"]
 	},
 	"include": ["src"],
 	"exclude": ["node_modules", "dist", "src/**/*.test.ts"]
