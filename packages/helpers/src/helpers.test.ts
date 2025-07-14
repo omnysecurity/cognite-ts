@@ -10,7 +10,6 @@ import { describe, expect, it } from 'vitest';
 import { __VIEWS, type __Dummy, type __Schema } from './_mock';
 import { createHelpers } from './helpers';
 
-
 describe('SchemaHelpers', () => {
 	it('provides nice helpers for views in the schema', () => {
 		const helpers = createHelpers<__Schema>(__VIEWS);
