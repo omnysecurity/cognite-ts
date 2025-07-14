@@ -2,10 +2,10 @@ import {
 	type ViewDefinition,
 	type ViewPropertyDefinition,
 	type ViewDefinitionProperty,
-	DataModel,
+	type DataModel,
 } from '@cognite/sdk';
 import ts from 'typescript';
-import { ExtendedViewCorePropertyDefinition } from './types.js';
+import { type ExtendedViewCorePropertyDefinition } from './types.js';
 
 function resolveTypeNode(
 	propSpec: ExtendedViewCorePropertyDefinition
