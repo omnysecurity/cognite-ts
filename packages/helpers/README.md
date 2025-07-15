@@ -1,4 +1,4 @@
-# @cognite/helpers
+# @omnysecurity/cognite-helpers
 
 Enhanced TypeScript support for Cognite Data Fusion APIs
 
@@ -9,7 +9,7 @@ This package provides the core functionality for generating TypeScript types and
 ## Usage
 
 ```typescript
-import { createHelpers, Filter } from '@cognite/codegen';
+import { createHelpers, Filter } from '@omnysecurity/cognite-helpers';
 import { __Schema, VIEW_DEFINITIONS } from 'data_models/dm_example@2';
 
 const helpers = new createHelpers<__Schema>(VIEW_DEFINITIONS);
@@ -17,11 +17,11 @@ const f = new Filter(helpers);
 
 // Use helpers and filter instance to query data with ease
 const instances = await client.instances.list({
-  sources: [helpers.getView('MyView').asSource()],
-    filter: f.and(
-      f.instance.equals('node', 'space', 'jam'),
-      f.equals('MyView', 'someProperty', 49)
-    ),
+	sources: [helpers.getView('MyView').asSource()],
+	filter: f.and(
+		f.instance.equals('node', 'space', 'jam'),
+		f.equals('MyView', 'someProperty', 49)
+	),
 });
 
 // Extract data from response

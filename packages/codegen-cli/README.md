@@ -1,11 +1,11 @@
-# @cognite/codegen-cli
+# @omnysecurity/cognite-codegen-cli
 
 Command-line interface for generating TypeScript types from Cognite Data Fusion data models.
 
 ## Installation
 
 ```bash
-npm install -g @cognite/codegen-cli
+npm install -g @omnysecurity/cognite-codegen-cli
 ```
 
 ## Usage
@@ -26,11 +26,13 @@ cognite-codegen --model my_data_model --version 1.0 --output schema.ts
 ## Examples
 
 Generate types for a specific data model:
+
 ```bash
 cognite-codegen --model omny_cpdo --version 1_4 --output schema.ts
 ```
 
 Use with a different CDF cluster:
+
 ```bash
 cognite-codegen \
   --cluster https://api.cognitedata.com \
