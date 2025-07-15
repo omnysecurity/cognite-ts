@@ -11,9 +11,8 @@
 		"noFallthroughCasesInSwitch": false,
 		"baseUrl": "./",
 		"outDir": "dist",
-		"declaration": true,
 		"types": ["node"]
 	},
 	"include": ["src"],
-	"exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+	"exclude": ["dist", "node_modules"]
 }
