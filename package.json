@@ -13,7 +13,7 @@
 		"node": ">=22.0.0"
 	},
 	"scripts": {
-		"build": "tsc && pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
+		"build": "pnpm --recursive --parallel --filter \"./packages/**/*\" run build",
 		"check": "pnpm --recursive --filter \"./packages/**/*\" exec tsc",
 		"test": "vitest --run",
 		"lint": "eslint",
