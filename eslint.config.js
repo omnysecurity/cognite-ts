@@ -36,6 +36,11 @@ export default [
 					argsIgnorePattern: '^_',
 				},
 			],
+			'import/no-duplicates': 'error',
+			'@typescript-eslint/no-redeclare': 'error',
+			'@typescript-eslint/no-dupe-class-members': 'error',
+			'@typescript-eslint/no-duplicate-enum-values': 'error',
+			'@typescript-eslint/no-duplicate-type-constituents': 'error',
 		},
 	},
 ];

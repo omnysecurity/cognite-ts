@@ -5,6 +5,7 @@
 	"description": "Enhanced TypeScript support for Cognite Data Fusion APIs",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"type": "module",
 	"scripts": {
 		"build": "tsc",
 		"test": "vitest run",

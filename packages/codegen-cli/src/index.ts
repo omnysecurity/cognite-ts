@@ -4,7 +4,6 @@ import { CogniteClient } from '@cognite/sdk';
 import { generate } from '@omnysecurity/cognite-codegen';
 import meow from 'meow';
 
-
 export const main = async (options: Options) => {
 	const client = new CogniteClient({
 		appId: '@omnysec/cognite-codegen',
@@ -107,7 +106,7 @@ const cli = meow(
 		},
 	}
 );
-main(cli.flags)
+main(cli.flags as Options)
 	.then((res) => console.log('Success', res))
 	.catch((err) => console.error(err))
 	.finally(() => console.info('fin.'));
