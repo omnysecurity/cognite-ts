@@ -4,6 +4,21 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    eslint:
+      specifier: ^9.29.0
+      version: 9.29.0
+    prettier:
+      specifier: ^3.6.1
+      version: 3.6.1
+    typescript:
+      specifier: ^5.8.3
+      version: 5.8.3
+    vitest:
+      specifier: ^3.2.4
+      version: 3.2.4
+
 importers:
 
   .:
@@ -46,16 +61,16 @@ importers:
         version: 10.0.0
     devDependencies:
       eslint:
-        specifier: ^9.29.0
+        specifier: 'catalog:'
         version: 9.29.0
       prettier:
-        specifier: ^3.6.1
+        specifier: 'catalog:'
         version: 3.6.1
       typescript:
-        specifier: ^5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
       vitest:
-        specifier: ^3.2.4
+        specifier: 'catalog:'
         version: 3.2.4(@types/node@24.0.10)
 
   packages/codegen-cli:
@@ -77,16 +92,16 @@ importers:
         specifier: ^24.0.10
         version: 24.0.10
       eslint:
-        specifier: ^9.29.0
+        specifier: 'catalog:'
         version: 9.29.0
       prettier:
-        specifier: ^3.6.1
+        specifier: 'catalog:'
         version: 3.6.1
       typescript:
-        specifier: ^5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
       vitest:
-        specifier: ^3.2.4
+        specifier: 'catalog:'
         version: 3.2.4(@types/node@24.0.10)
 
   packages/helpers:
@@ -96,16 +111,16 @@ importers:
         version: 10.0.0
     devDependencies:
       eslint:
-        specifier: ^9.29.0
+        specifier: 'catalog:'
         version: 9.29.0
       prettier:
-        specifier: ^3.6.1
+        specifier: 'catalog:'
         version: 3.6.1
       typescript:
-        specifier: ^5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
       vitest:
-        specifier: ^3.2.4
+        specifier: 'catalog:'
         version: 3.2.4(@types/node@24.0.10)
 
 packages:
