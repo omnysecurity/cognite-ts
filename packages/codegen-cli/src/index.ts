@@ -58,7 +58,7 @@ const cli = meow(
 	  $ cognite-codegen
 
 	Options
-    --cluster,   -c  CDF Cluster
+    --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com)
     --project,   -p  CDF Project
     --space,     -s  CDF Model Space
 		--model      -m  CDF Data model externalId
@@ -75,7 +75,7 @@ const cli = meow(
 			cluster: {
 				shortFlag: 'c',
 				type: 'string',
-				isRequired: true,
+				default: 'https://westeurope-1.cognitedata.com',
 			},
 			output: {
 				shortFlag: 'o',

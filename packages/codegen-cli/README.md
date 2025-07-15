@@ -25,7 +25,7 @@ cognite-codegen --model my_data_model --version 1.0 --output schema.ts
 
 ## Examples
 
-Generate types for a specific data model:
+Generate types for a specific data model (using default cluster):
 
 ```bash
 cognite-codegen --model omny_cpdo --version 1_4 --output schema.ts
