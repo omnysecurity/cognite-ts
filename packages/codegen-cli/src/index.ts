@@ -55,7 +55,7 @@ type Options = {
 const cli = meow(
 	`
 	Usage
-	  $ cognite-codegen
+	  $ node .
 
 	Options
     --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com)
@@ -67,7 +67,7 @@ const cli = meow(
     --token,     -t  CDF Access token
 
 	Examples
-	  $ cognite-codegen --model omny_cpdo --version 1_4 --output schema.ts
+	  $ node . --model omny_cpdo --version 1_4 --output schema.ts
 `,
 	{
 		importMeta: import.meta, // This is required

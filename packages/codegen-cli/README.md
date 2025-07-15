@@ -4,23 +4,22 @@ Command-line interface for generating TypeScript types from Cognite Data Fusion 
 
 ## Installation
 
-```bash
-npm install -g @omnysecurity/cognite-codegen-cli
-```
+**Note:** This package is currently private. You need to build from source and use `node .` to run the CLI.
 
 ## Usage
 
 ```bash
-cognite-codegen --model my_data_model --version 1.0 --output schema.ts
+node . --help
 ```
 
 ## Options
 
 - `--cluster, -c`: CDF Cluster URL (default: https://westeurope-1.cognitedata.com)
-- `--project, -p`: CDF Project name (default: omny-dev)
-- `--space, -s`: CDF Model Space (default: omny-dev)
-- `--model, -m`: CDF Data model externalId (required)
-- `--version, -v`: CDF Data model version (required)
+- `--project, -p`: CDF Project name (**required**)
+- `--space, -s`: CDF Model Space (**required**)
+- `--model, -m`: CDF Data model externalId (**required**)
+- `--version, -v`: CDF Data model version (**required**)
+- `--token, -t`: CDF Access token (**required**)
 - `--output, -o`: Output file path (default: auto-generated based on model name)
 
 ## Examples
@@ -28,17 +27,24 @@ cognite-codegen --model my_data_model --version 1.0 --output schema.ts
 Generate types for a specific data model (using default cluster):
 
 ```bash
-cognite-codegen --model omny_cpdo --version 1_4 --output schema.ts
+node . \
+  --project omny-dev \
+  --space sp_omny_app_model_risk \
+  --model dm_omny_app_risk \
+  --version 1 \
+  --token "your-cdf-token"
 ```
 
 Use with a different CDF cluster:
 
 ```bash
-cognite-codegen \
+node . \
   --cluster https://api.cognitedata.com \
   --project my-project \
+  --space my-space \
   --model my_model \
-  --version 1.0
+  --version 1.0 \
+  --token "your-cdf-token"
 ```
 
 ## Authentication
@@ -56,5 +62,5 @@ To obtain a CDF token:
 Example:
 
 ```bash
-cognite-codegen --token "your-cdf-token-here" --model my_model --version 1.0
+node . --token "your-cdf-token-here" --model my_model --version 1.0
 ```
