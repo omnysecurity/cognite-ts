@@ -53,7 +53,7 @@ TypeScript tools and utilities for building applications using the `@cognite/sdk
 
 To use the codegen tool, you need:
 
-1. **Cluster URL**: Your CDF cluster (e.g., `https://api.cognitedata.com` or `https://westeurope-1.cognitedata.com`)
+1. **Cluster URL**: Your CDF cluster (e.g., `https://api.cognitedata.com` or `https://westeurope-1.cognitedata.com`) see [this link](https://docs.cognite.com/cdf/admin/clusters_regions/) for more info
 2. **Project**: Your CDF project name
 3. **Space**: The space containing your data model
 4. **Model**: The external ID of your data model
@@ -73,13 +73,12 @@ cd ./packages/codegen-cli
 pnpm install
 pnpm build
 node . \
-  --cluster https://api.cognitedata.com \
   --project acme \
   --space jam \
   --model citizen \
   --version 42 \
   --output datamodel.ts \
-  --token <access token to CDF>
+  --token "<access token to CDF>"
 ```
 
 **Real Example:**
