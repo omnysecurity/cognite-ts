@@ -11,8 +11,9 @@
 		"noFallthroughCasesInSwitch": false,
 		"baseUrl": "./",
 		"outDir": "dist",
+		"rootDir": "src",
 		"types": ["node"]
 	},
-	"include": ["src"],
+	"include": ["src/**/*"],
 	"exclude": ["dist", "node_modules"]
 }
