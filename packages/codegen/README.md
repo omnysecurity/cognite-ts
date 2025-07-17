@@ -1,4 +1,4 @@
-# @cognite/codegen
+# @omnysecurity/cognite-codegen
 
 Core TypeScript code generation library for Cognite Data Fusion data models.
 
@@ -9,11 +9,11 @@ This package provides the core functionality for generating TypeScript types and
 ## Usage
 
 ```typescript
-import { generate } from '@cognite/codegen';
+import { generate } from '@omnysecurity/cognite-codegen';
 
 const output = generate({
-  dataModel: myDataModel,
-  views: myViews,
+	dataModel: myDataModel,
+	views: myViews,
 });
 
 // Write the generated TypeScript code to a file
@@ -35,9 +35,11 @@ await writeFile('generated-types.ts', output.fileContent);
 Generates TypeScript code from a CDF data model.
 
 **Parameters:**
+
 - `options.dataModel`: The CDF DataModel object
 - `options.views`: Array of ViewDefinition objects from the data model
 
 **Returns:**
+
 - `fileName`: Suggested filename for the generated code
 - `fileContent`: The generated TypeScript code as a string

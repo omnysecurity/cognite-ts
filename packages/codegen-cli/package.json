@@ -6,9 +6,6 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",
-	"bin": {
-		"cognite-codegen": "./dist/index.js"
-	},
 	"scripts": {
 		"build": "tsc",
 		"test": "vitest run",
@@ -22,7 +19,6 @@
 		"src/"
 	],
 	"dependencies": {
-		"@azure/msal-node": "^3.6.1",
 		"@cognite/sdk": "^10.0.0",
 		"@omnysecurity/cognite-codegen": "workspace:*",
 		"meow": "^13.2.0"
