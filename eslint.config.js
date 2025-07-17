@@ -6,11 +6,10 @@ import pluginUnusedImports from 'eslint-plugin-unused-imports';
 export default [
 	{
 		files: ['**/*.ts'],
+		ignores: ['**/node_modules/**', '**/dist/**'],
 		languageOptions: {
 			parser: parserTypeScript,
-			parserOptions: {
-				project: './tsconfig.json',
-			},
+			parserOptions: { projectService: true },
 			sourceType: 'module',
 			ecmaVersion: 'latest',
 		},
