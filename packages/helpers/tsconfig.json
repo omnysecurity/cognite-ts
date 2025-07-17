@@ -2,8 +2,7 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"outDir": "dist",
-		"moduleResolution": "bundler",
-		"module": "ESNext",
+		"rootDir": "src",
 		"allowSyntheticDefaultImports": true
 	},
 	"include": ["src/**/*"],

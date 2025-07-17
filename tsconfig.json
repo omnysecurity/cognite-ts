@@ -9,9 +9,8 @@
 		"esModuleInterop": true,
 		"declaration": true,
 		"skipLibCheck": true,
-		"moduleResolution": "NodeNext",
+		"moduleResolution": "bundler",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"types": [],
 		"isolatedModules": true,
 		"sourceMap": true,
 		"declarationMap": true,
@@ -29,9 +28,14 @@
 		"noUncheckedIndexedAccess": true,
 		"strictNullChecks": true,
 		"target": "ES2022",
-		"module": "NodeNext",
+		"module": "ESNext",
 		"incremental": true,
 		"verbatimModuleSyntax": true,
 		"noImplicitOverride": true
-	}
+	},
+	"references": [
+		{ "path": "packages/codegen" },
+		{ "path": "packages/codegen-cli" },
+		{ "path": "packages/helpers" }
+	]
 }
