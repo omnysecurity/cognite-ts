@@ -18,7 +18,10 @@
 		"test": "vitest --run",
 		"lint": "eslint",
 		"lint:fix": "pnpm lint --fix",
-		"format": "prettier --write \"**/*.{ts,tsx,md}\""
+		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
+		"changeset": "changeset",
+		"version-packages": "changeset version",
+		"release": "pnpm build && changeset publish"
 	},
 	"workspaces": [
 		"packages/codegen",
@@ -26,6 +29,7 @@
 		"packages/helpers"
 	],
 	"devDependencies": {
+		"@changesets/cli": "^2.29.6",
 		"@typescript-eslint/eslint-plugin": "^8.35.0",
 		"@typescript-eslint/parser": "^8.35.0",
 		"eslint": "catalog:",

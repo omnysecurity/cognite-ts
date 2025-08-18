@@ -1,8 +1,27 @@
 {
 	"name": "@omnysecurity/cognite-helpers",
 	"version": "0.0.0",
-	"private": true,
+	"private": false,
 	"description": "Enhanced TypeScript support for Cognite Data Fusion APIs",
+	"keywords": [
+		"cognite",
+		"cdf",
+		"typescript",
+		"data-fusion",
+		"helpers",
+		"sdk"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/omnysecurity/cognite-ts.git",
+		"directory": "packages/helpers"
+	},
+	"homepage": "https://github.com/omnysecurity/cognite-ts#readme",
+	"bugs": {
+		"url": "https://github.com/omnysecurity/cognite-ts/issues"
+	},
+	"author": "Omny Security",
+	"license": "Apache-2.0",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",

@@ -1,8 +1,27 @@
 {
 	"name": "@omnysecurity/cognite-codegen",
 	"version": "0.0.0",
-	"private": true,
+	"private": false,
 	"description": "Core TypeScript code generation library for Cognite Data Fusion data models",
+	"keywords": [
+		"cognite",
+		"cdf",
+		"codegen",
+		"typescript",
+		"data-fusion",
+		"data-models"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/omnysecurity/cognite-ts.git",
+		"directory": "packages/codegen"
+	},
+	"homepage": "https://github.com/omnysecurity/cognite-ts#readme",
+	"bugs": {
+		"url": "https://github.com/omnysecurity/cognite-ts/issues"
+	},
+	"author": "Omny Security",
+	"license": "Apache-2.0",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",

@@ -10,7 +10,17 @@ TypeScript tools and utilities for building applications using the `@cognite/sdk
 
 ## Installation
 
-**Note:** Currently, all packages are private and not published to npm. You need to build from source.
+**Note:** These packages are currently in pre-release (0.x.y versions). The API may change before the stable 1.0.0 release.
+
+### From npm (Pre-release)
+```bash
+npm install @omnysecurity/cognite-codegen
+npm install -g @omnysecurity/cognite-codegen-cli
+npm install @omnysecurity/cognite-helpers
+```
+
+### From source (Development)
+If you want to build from source or contribute:
 
 ### Prerequisites
 
