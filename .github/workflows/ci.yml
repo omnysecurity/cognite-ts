@@ -46,8 +46,11 @@ jobs:
       - name: Verify packages can be packed
         run: |
           cd packages/codegen
-          pnpm pack --dry-run
+          pnpm pack
           cd ../codegen-cli
-          pnpm pack --dry-run
+          pnpm pack
           cd ../helpers
-          pnpm pack --dry-run
+          pnpm pack
+          cd ../..
+          # Clean up generated .tgz files
+          rm -f packages/*/*.tgz
