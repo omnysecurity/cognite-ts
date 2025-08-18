@@ -67,7 +67,7 @@ const cli = meow(
     --token,     -t  CDF Access token
 
 	Examples
-	  $ node . --model omny_cpdo --version 1_4 --output schema.ts
+	  $ node . --model my-model --version 1_4 --output schema.ts
 `,
 	{
 		importMeta: import.meta, // This is required
