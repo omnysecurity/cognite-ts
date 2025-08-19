@@ -1,4 +1,4 @@
 import { Filter } from './filter';
-import { createHelpers } from './helpers';
+import { createHelpers, type SchemaHelpers } from './helpers';
 
-export { createHelpers, Filter };
+export { createHelpers, Filter, type SchemaHelpers };
