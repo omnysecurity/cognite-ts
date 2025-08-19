@@ -13,7 +13,7 @@ import type {
 } from '@cognite/sdk';
 import type { SchemaHelpers } from './helpers';
 
-type NodeOrEdgeSchema = {
+export type NodeOrEdgeSchema = {
 	node: {
 		space: string;
 		externalId: string;
@@ -56,7 +56,7 @@ const createCoreHelpers = (): Pick<
 /**
  * BasicFilter supports built-in properties such as `["node", "externalId"]` and `["edge", "type"]`
  */
-interface BasicFilter<TSchema> {
+export interface BasicFilter<TSchema> {
 	prefix<TView extends keyof TSchema>(
 		view: TView,
 		property: keyof TSchema[typeof view],
