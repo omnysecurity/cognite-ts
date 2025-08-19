@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-helpers
 
+## 0.1.2
+
+### Patch Changes
+
+- 7db1d43: export type declaration for internals
+
 ## 0.1.1
 
 ### Patch Changes
