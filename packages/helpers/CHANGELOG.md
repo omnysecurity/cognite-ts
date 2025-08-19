@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-helpers
 
+## 0.1.1
+
+### Patch Changes
+
+- eac3193: allow importing typescript declaration for helpers and filter
+
 ## 0.1.0
 
 ### Minor Changes
