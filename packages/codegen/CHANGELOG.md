@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-codegen
 
+## 0.1.1
+
+### Patch Changes
+
+- 9ae27d6: re-publish
+
 ## 0.1.0
 
 ### Minor Changes

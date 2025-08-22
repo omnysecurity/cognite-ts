@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-helpers
 
+## 0.1.3
+
+### Patch Changes
+
+- 9ae27d6: re-publish
+
 ## 0.1.2
 
 ### Patch Changes
