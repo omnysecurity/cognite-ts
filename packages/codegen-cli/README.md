@@ -9,7 +9,7 @@ Command-line interface for generating TypeScript types from Cognite Data Fusion 
 ## Usage
 
 ```bash
-node . --help
+npx @omnysecurity/cognite-codegen-cli --help
 ```
 
 ## Options
@@ -28,23 +28,12 @@ Generate types for a specific data model (using default cluster):
 
 ```bash
 node . \
-  --project omny-dev \
-  --space sp_omny_app_model_risk \
-  --model dm_omny_app_risk \
-  --version 1 \
-  --token "your-cdf-token"
-```
-
-Use with a different CDF cluster:
-
-```bash
-node . \
   --cluster https://api.cognitedata.com \
-  --project my-project \
-  --space my-space \
-  --model my_model \
-  --version 1.0 \
-  --token "your-cdf-token"
+  --project acme \
+  --space acme_models \
+  --model acme_domain \
+  --version 1 \
+  --token "<access token>"
 ```
 
 ## Authentication
@@ -58,9 +47,3 @@ To obtain a CDF token:
 3. Go to Network tab and make any request
 4. Look for the `Authorization` header in the request
 5. Copy the token value (without "Bearer " prefix)
-
-Example:
-
-```bash
-node . --token "your-cdf-token-here" --model my_model --version 1.0
-```

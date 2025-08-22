@@ -13,6 +13,7 @@ TypeScript tools and utilities for building applications using the `@cognite/sdk
 **Note:** These packages are currently in pre-release (0.x.y versions). The API may change before the stable 1.0.0 release.
 
 ### From npm (Pre-release)
+
 ```bash
 npm install @omnysecurity/cognite-codegen
 npm install -g @omnysecurity/cognite-codegen-cli
@@ -20,6 +21,7 @@ npm install @omnysecurity/cognite-helpers
 ```
 
 ### From source (Development)
+
 If you want to build from source or contribute:
 
 ### Prerequisites
@@ -89,19 +91,6 @@ node . \
   --version 42 \
   --output datamodel.ts \
   --token "<access token to CDF>"
-```
-
-**Real Example:**
-
-```bash
-node . \
-  --cluster https://westeurope-1.cognitedata.com \
-  --project omny-dev \
-  --space omny_models \
-  --model customer_data_model \
-  --version 1.2 \
-  --output customer-schema.ts \
-  --token "eyJ0eXAiOiJKV1QiLCJhbGciOiJ..."
 ```
 
 This will generate a TypeScript file with:
