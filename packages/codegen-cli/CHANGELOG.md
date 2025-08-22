@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-codegen-cli
 
+## 0.1.1
+
+### Patch Changes
+
+- 9c8777e: add missing typescript dependency
+
 ## 0.1.0
 
 ### Minor Changes
