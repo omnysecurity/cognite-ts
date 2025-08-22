@@ -1,5 +1,13 @@
 # @omnysecurity/cognite-codegen-cli
 
+## 0.1.2
+
+### Patch Changes
+
+- 9ae27d6: re-publish
+- Updated dependencies [9ae27d6]
+  - @omnysecurity/cognite-codegen@0.1.1
+
 ## 0.1.1
 
 ### Patch Changes

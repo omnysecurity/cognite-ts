@@ -1,6 +1,6 @@
 {
 	"name": "@omnysecurity/cognite-codegen",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": false,
 	"description": "Core TypeScript code generation library for Cognite Data Fusion data models",
 	"keywords": [
