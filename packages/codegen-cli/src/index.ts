@@ -2,6 +2,7 @@
 import { writeFile } from 'fs/promises';
 import { CogniteClient } from '@cognite/sdk';
 import { generate } from '@omnysecurity/cognite-codegen';
+import { config } from 'dotenv';
 import meow from 'meow';
 
 export const main = async (options: Options) => {
@@ -52,19 +53,21 @@ type Options = {
 	output?: string;
 };
 
+config();
+
 const cli = meow(
 	`
 	Usage
 	  $ node .
 
-	Options
-    --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com)
-    --project,   -p  CDF Project
-    --space,     -s  CDF Model Space
-		--model      -m  CDF Data model externalId
-		--version    -v  CDF Data model version
-    --output,    -o  Output file (default: schema.ts)
-    --token,     -t  CDF Access token
+	Options (Can also be provided through a .env file)
+    --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com or COGNITE_CLUSTER env var)
+    --project,   -p  CDF Project (or COGNITE_PROJECT env var)
+    --space,     -s  CDF Model Space (or COGNITE_SPACE env var)
+		--model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
+		--version    -v  CDF Data model version (or COGNITE_VERSION env var)
+    --output,    -o  Output file (default: schema.ts or COGNITE_OUTPUT env var)
+    --token,     -t  CDF Access token (or COGNITE_TOKEN env var)
 
 	Examples
 	  $ node . --model my-model --version 1_4 --output schema.ts
@@ -75,38 +78,71 @@ const cli = meow(
 			cluster: {
 				shortFlag: 'c',
 				type: 'string',
-				default: 'https://westeurope-1.cognitedata.com',
+				default:
+					process.env.COGNITE_CLUSTER ?? 'https://westeurope-1.cognitedata.com',
 			},
 			output: {
 				shortFlag: 'o',
 				type: 'string',
+				...(process.env.COGNITE_OUTPUT && {
+					default: process.env.COGNITE_OUTPUT,
+				}),
 			},
 			project: {
 				shortFlag: 'p',
 				type: 'string',
-				isRequired: true,
+				...(process.env.COGNITE_PROJECT && {
+					default: process.env.COGNITE_PROJECT,
+				}),
 			},
 			space: {
 				shortFlag: 's',
 				type: 'string',
-				isRequired: true,
+				...(process.env.COGNITE_SPACE && {
+					default: process.env.COGNITE_SPACE,
+				}),
 			},
 			model: {
 				type: 'string',
-				isRequired: true,
+				...(process.env.COGNITE_MODEL && {
+					default: process.env.COGNITE_MODEL,
+				}),
 			},
 			version: {
 				type: 'string',
-				isRequired: true,
+				...(process.env.COGNITE_VERSION && {
+					default: process.env.COGNITE_VERSION,
+				}),
 			},
 			token: {
 				type: 'string',
-				isRequired: true,
+				...(process.env.COGNITE_TOKEN && {
+					default: process.env.COGNITE_TOKEN,
+				}),
 			},
 		},
 	}
 );
-main(cli.flags as Options)
+
+// Validate required options are present (either from CLI or env)
+const options = cli.flags as Options;
+const requiredFields = [
+	'project',
+	'space',
+	'model',
+	'version',
+	'token',
+] as const;
+const missingFields = requiredFields.filter((field) => !options[field]);
+
+if (missingFields.length > 0) {
+	console.error(
+		`Missing required options: ${missingFields.join(', ')}\nProvide them via CLI flags or .env file`
+	);
+	process.exit(1);
+}
+
+main(options)
 	.then((res) => console.log('Success', res))
 	.catch((err) => console.error(err))
 	.finally(() => console.info('fin.'));
