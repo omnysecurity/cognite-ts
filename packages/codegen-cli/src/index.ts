@@ -66,7 +66,7 @@ const cli = meow(
     --space,     -s  CDF Model Space (or COGNITE_SPACE env var)
 		--model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
 		--version    -v  CDF Data model version (or COGNITE_VERSION env var)
-    --output,    -o  Output file (default: schema.ts or COGNITE_OUTPUT env var)
+    --output,    -o  Output file (default: schema.ts)
     --token,     -t  CDF Access token (or COGNITE_TOKEN env var)
 
 	Examples
@@ -84,9 +84,6 @@ const cli = meow(
 			output: {
 				shortFlag: 'o',
 				type: 'string',
-				...(process.env.COGNITE_OUTPUT && {
-					default: process.env.COGNITE_OUTPUT,
-				}),
 			},
 			project: {
 				shortFlag: 'p',
