@@ -226,6 +226,8 @@ export function generateTypescriptFile(
 		...generateTypesForBuiltInViews(),
 		...generateTypesForViews(views),
 		createViewPropertyMap(views),
+		createConnectionsMetadata(views),
+		createEdgeTypesConstant(views),
 		createDataModelConstant(model),
 	]);
 
@@ -258,6 +260,185 @@ function createViewPropertyMap(views: ViewDefinition[]) {
 	);
 	const declaration = ts.factory.createVariableDeclaration(
 		'__VIEWS',
+		undefined,
+		undefined,
+		ts.factory.createAsExpression(
+			objectLiteral,
+			ts.factory.createTypeReferenceNode('const')
+		)
+	);
+	const declarationList = ts.factory.createVariableDeclarationList(
+		[declaration],
+		ts.NodeFlags.Const
+	);
+
+	const statement = ts.factory.createVariableStatement(
+		ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
+		declarationList
+	);
+	return statement;
+}
+
+function createConnectionsMetadata(views: ViewDefinition[]) {
+	const viewConnections = views.map((view) => {
+		const connectionProperties = Object.entries(view.properties)
+			.map(([propName, propSpec]) => {
+				if (!("connectionType" in propSpec)) return undefined;
+
+				const metadata: ts.ObjectLiteralElementLike[] = [
+					ts.factory.createPropertyAssignment(
+						'connectionType',
+						ts.factory.createStringLiteral(propSpec.connectionType)
+					),
+					ts.factory.createPropertyAssignment(
+						'source',
+						// TODO: allow fully quallified ID reference
+						ts.factory.createStringLiteral(view.externalId)
+					),
+					ts.factory.createPropertyAssignment(
+						'target',
+						// TODO: allow fully quallified ID reference
+						ts.factory.createStringLiteral(propSpec.source.externalId)
+					),
+					...(
+						propSpec.connectionType === 'multi_edge_connection' || propSpec.connectionType === 'single_edge_connection'
+							? [
+								ts.factory.createPropertyAssignment(
+									'edgeType',
+									ts.factory.createObjectLiteralExpression([
+											ts.factory.createPropertyAssignment(
+												'space',
+												ts.factory.createStringLiteral(propSpec.type.space)
+											),
+											ts.factory.createPropertyAssignment(
+												'externalId',
+												ts.factory.createStringLiteral(propSpec.type.externalId)
+											),
+										], false)
+								),
+								ts.factory.createPropertyAssignment('direction', ts.factory.createStringLiteral(propSpec.direction ?? "outwards")),
+								propSpec.edgeSource !== undefined 
+									// TODO: allow fully quallified ID reference
+									? ts.factory.createPropertyAssignment('edgeSource', ts.factory.createStringLiteral(propSpec.edgeSource.externalId)) 
+									: undefined
+							].filter(nullishFilter)
+							: propSpec.connectionType === "multi_reverse_direct_relation" || propSpec.connectionType === 'single_reverse_direct_relation' ?
+							[
+								ts.factory.createPropertyAssignment(
+								'through',
+								ts.factory.createObjectLiteralExpression([
+									ts.factory.createPropertyAssignment(
+										'source',
+										ts.factory.createObjectLiteralExpression([
+											ts.factory.createPropertyAssignment(
+												'space',
+												ts.factory.createStringLiteral(propSpec.through.source.space)
+											),
+											ts.factory.createPropertyAssignment(
+												'externalId',
+												ts.factory.createStringLiteral(propSpec.through.source.externalId)
+											),
+										], false)
+									),
+									ts.factory.createPropertyAssignment(
+										'identifier',
+										ts.factory.createStringLiteral(propSpec.through.identifier)
+									),
+								], true)
+							)
+							]
+							: []
+					)
+				];
+
+
+				return ts.factory.createPropertyAssignment(
+					propName,
+					ts.factory.createObjectLiteralExpression(metadata, true)
+				);
+			}).filter(nullishFilter);
+
+		if (connectionProperties.length === 0) {
+			return undefined;
+		}
+
+		return ts.factory.createPropertyAssignment(
+			view.externalId,
+			ts.factory.createObjectLiteralExpression(connectionProperties, true)
+		);
+	}).filter(nullishFilter);
+
+	const objectLiteral = ts.factory.createObjectLiteralExpression(
+		viewConnections,
+		true
+	);
+	const declaration = ts.factory.createVariableDeclaration(
+		'__CONNECTIONS',
+		undefined,
+		undefined,
+		ts.factory.createAsExpression(
+			objectLiteral,
+			ts.factory.createTypeReferenceNode('const')
+		)
+	);
+	const declarationList = ts.factory.createVariableDeclarationList(
+		[declaration],
+		ts.NodeFlags.Const
+	);
+
+	const statement = ts.factory.createVariableStatement(
+		ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
+		declarationList
+	);
+	return statement;
+}
+
+function createEdgeTypesConstant(views: ViewDefinition[]) {
+	const edgeTypes = new Map<string, { space: string; externalId: string }>();
+
+	views.forEach((view) => {
+		Object.entries(view.properties).forEach(([_, propSpec]) => {
+			if ("connectionType" in propSpec) {
+				// Only process edge connections (not reverse direct relations)
+				if (
+					(propSpec.connectionType === 'multi_edge_connection' ||
+					 propSpec.connectionType === 'single_edge_connection')
+				) {
+					const key = `${propSpec.type.space}:${propSpec.type.externalId}`;
+					if (!edgeTypes.has(key)) {
+						edgeTypes.set(key, {
+							space: propSpec.type.space,
+							externalId: propSpec.type.externalId,
+						});
+					}
+				}
+			}
+		});
+	});
+
+	const edgeTypeProperties = Array.from(edgeTypes.values()).map((edgeType) =>
+		ts.factory.createPropertyAssignment(
+			// TODO: allow fully quallified ID reference
+			edgeType.externalId,
+			ts.factory.createObjectLiteralExpression([
+				ts.factory.createPropertyAssignment(
+					'space',
+					ts.factory.createStringLiteral(edgeType.space)
+				),
+				ts.factory.createPropertyAssignment(
+					'externalId',
+					ts.factory.createStringLiteral(edgeType.externalId)
+				),
+			], false)
+		)
+	);
+
+	const objectLiteral = ts.factory.createObjectLiteralExpression(
+		edgeTypeProperties,
+		true
+	);
+	const declaration = ts.factory.createVariableDeclaration(
+		'__EDGE_TYPES',
 		undefined,
 		undefined,
 		ts.factory.createAsExpression(
