@@ -7,15 +7,32 @@ import {
 import ts from 'typescript';
 import { type ExtendedViewCorePropertyDefinition } from './types.js';
 
+export type ViewReferenceStyle = 'simple' | 'namespaced' | 'versioned';
+
+function getViewIdentifier(
+	view: ViewDefinition | { space: string; externalId: string; version: string },
+	style: ViewReferenceStyle
+): string {
+	switch (style) {
+		case 'simple':
+			return view.externalId;
+		case 'namespaced':
+			return `${view.space}_${view.externalId}`;
+		case 'versioned':
+			return `${view.space}_${view.externalId}_${view.version}`;
+	}
+}
+
 function resolveTypeNode(
-	propSpec: ExtendedViewCorePropertyDefinition
+	propSpec: ExtendedViewCorePropertyDefinition,
+	style: ViewReferenceStyle
 ): ts.TypeNode {
 	if ('list' in propSpec.type) {
 		if (propSpec.type.list) {
 			const typeNode = resolveTypeNode({
 				...propSpec,
 				type: { ...propSpec.type, list: false },
-			});
+			}, style);
 			return ts.factory.createArrayTypeNode(typeNode);
 		}
 	}
@@ -36,8 +53,11 @@ function resolveTypeNode(
 		case 'json':
 			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
 		case 'direct':
+			const targetIdentifier = propSpec.type.source
+				? getViewIdentifier(propSpec.type.source, style)
+				: 'unknown';
 			return ts.factory.createTypeReferenceNode(
-				`DirectReference<${propSpec.type.source?.externalId ?? 'unknown'}>`
+				`DirectReference<${targetIdentifier}>`
 			);
 		case 'enum':
 			if (propSpec.type.values) {
@@ -144,12 +164,12 @@ export function nullishFilter<T>(element: T | null | undefined): element is T {
 	return element !== undefined && element !== null;
 }
 
-function generateTypesForViews(views: ViewDefinition[]) {
-	return views.flatMap(generateTypeForView);
+function generateTypesForViews(views: ViewDefinition[], style: ViewReferenceStyle) {
+	return views.flatMap(view => generateTypeForView(view, style));
 }
 
 // Function to generate TypeScript AST from the spec
-function generateTypeForView(spec: ViewDefinition) {
+function generateTypeForView(spec: ViewDefinition, style: ViewReferenceStyle) {
 	const members = Object.entries(spec.properties)
 		.map(([propName, propSpec]) => {
 			if (
@@ -163,7 +183,7 @@ function generateTypeForView(spec: ViewDefinition) {
 					(propSpec as unknown as Record<string, boolean>)['nullable']
 						? ts.factory.createToken(ts.SyntaxKind.QuestionToken)
 						: undefined,
-					resolveTypeNode(propSpec)
+					resolveTypeNode(propSpec, style)
 				);
 			} else {
 				// TODO: Direct relation-types are not exported in the SDK :shrug:
@@ -174,18 +194,20 @@ function generateTypeForView(spec: ViewDefinition) {
 
 	const typeLiteral = ts.factory.createTypeLiteralNode(members);
 	const typeExtends = (spec.implements ?? []).map((view) =>
-		ts.factory.createTypeReferenceNode(view.externalId, undefined)
+		ts.factory.createTypeReferenceNode(getViewIdentifier(view, style), undefined)
 	);
 	const typeNode = ts.factory.createIntersectionTypeNode([
 		typeLiteral,
 		...typeExtends,
 	]);
 
+	const viewIdentifier = getViewIdentifier(spec, style);
+
 	return [
 		ts.factory.createJSDocComment(spec.description),
 		ts.factory.createTypeAliasDeclaration(
 			ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
-			ts.factory.createIdentifier(spec.externalId),
+			ts.factory.createIdentifier(viewIdentifier),
 			undefined,
 			typeNode // ts.factory.createTypeLiteralNode(members.filter(Boolean))
 		),
@@ -194,23 +216,25 @@ function generateTypeForView(spec: ViewDefinition) {
 	];
 }
 
-function generateTypeForSchema(views: ViewDefinition[]) {
+function generateTypeForSchema(views: ViewDefinition[], style: ViewReferenceStyle) {
 	return createType(
 		'__Schema',
 		ts.factory.createTypeLiteralNode(
-			views.map((view) =>
-				createProperty(
-					view.externalId,
-					ts.factory.createTypeReferenceNode(view.externalId)
-				)
-			)
+			views.map((view) => {
+				const identifier = getViewIdentifier(view, style);
+				return createProperty(
+					identifier,
+					ts.factory.createTypeReferenceNode(identifier)
+				);
+			})
 		)
 	);
 }
 
 export function generateTypescriptFile(
 	model: DataModel,
-	views: ViewDefinition[]
+	views: ViewDefinition[],
+	style: ViewReferenceStyle = 'simple'
 ) {
 	// Generate TypeScript AST for each spec
 	const sourceFile = ts.createSourceFile(
@@ -222,11 +246,11 @@ export function generateTypescriptFile(
 	);
 
 	const sourceNodes = ts.factory.createNodeArray([
-		generateTypeForSchema(views),
+		generateTypeForSchema(views, style),
 		...generateTypesForBuiltInViews(),
-		...generateTypesForViews(views),
-		createViewPropertyMap(views),
-		createConnectionsMetadata(views),
+		...generateTypesForViews(views, style),
+		createViewPropertyMap(views, style),
+		createConnectionsMetadata(views, style),
 		createEdgeTypesConstant(views),
 		createDataModelConstant(model),
 	]);
@@ -241,15 +265,16 @@ export function generateTypescriptFile(
 	return tsCode;
 }
 
-function createViewPropertyMap(views: ViewDefinition[]) {
+function createViewPropertyMap(views: ViewDefinition[], style: ViewReferenceStyle) {
 	const viewNameToPropertyNames = views.map((view) => {
 		const propertyNameLiterals = ts.factory.createArrayLiteralExpression(
 			Object.entries(view.properties).map(([propName, _propSpec]) =>
 				ts.factory.createStringLiteral(propName)
 			)
 		);
+		const viewIdentifier = getViewIdentifier(view, style);
 		return ts.factory.createPropertyAssignment(
-			view.externalId,
+			viewIdentifier,
 			propertyNameLiterals
 		);
 	});
@@ -279,7 +304,7 @@ function createViewPropertyMap(views: ViewDefinition[]) {
 	return statement;
 }
 
-function createConnectionsMetadata(views: ViewDefinition[]) {
+function createConnectionsMetadata(views: ViewDefinition[], style: ViewReferenceStyle) {
 	const viewConnections = views.map((view) => {
 		const connectionProperties = Object.entries(view.properties)
 			.map(([propName, propSpec]) => {
@@ -292,13 +317,11 @@ function createConnectionsMetadata(views: ViewDefinition[]) {
 					),
 					ts.factory.createPropertyAssignment(
 						'source',
-						// TODO: allow fully quallified ID reference
-						ts.factory.createStringLiteral(view.externalId)
+						ts.factory.createStringLiteral(getViewIdentifier(view, style))
 					),
 					ts.factory.createPropertyAssignment(
 						'target',
-						// TODO: allow fully quallified ID reference
-						ts.factory.createStringLiteral(propSpec.source.externalId)
+						ts.factory.createStringLiteral(getViewIdentifier(propSpec.source, style))
 					),
 					...(
 						propSpec.connectionType === 'multi_edge_connection' || propSpec.connectionType === 'single_edge_connection'
@@ -317,9 +340,8 @@ function createConnectionsMetadata(views: ViewDefinition[]) {
 										], false)
 								),
 								ts.factory.createPropertyAssignment('direction', ts.factory.createStringLiteral(propSpec.direction ?? "outwards")),
-								propSpec.edgeSource !== undefined 
-									// TODO: allow fully quallified ID reference
-									? ts.factory.createPropertyAssignment('edgeSource', ts.factory.createStringLiteral(propSpec.edgeSource.externalId)) 
+								propSpec.edgeSource !== undefined
+									? ts.factory.createPropertyAssignment('edgeSource', ts.factory.createStringLiteral(getViewIdentifier(propSpec.edgeSource, style)))
 									: undefined
 							].filter(nullishFilter)
 							: propSpec.connectionType === "multi_reverse_direct_relation" || propSpec.connectionType === 'single_reverse_direct_relation' ?
@@ -363,7 +385,7 @@ function createConnectionsMetadata(views: ViewDefinition[]) {
 		}
 
 		return ts.factory.createPropertyAssignment(
-			view.externalId,
+			getViewIdentifier(view, style),
 			ts.factory.createObjectLiteralExpression(connectionProperties, true)
 		);
 	}).filter(nullishFilter);
@@ -501,12 +523,15 @@ function createDataModelConstant(model: DataModel) {
 type GenerateFileOptions = {
 	dataModel: DataModel;
 	views: ViewDefinition[];
+	viewReferenceStyle?: ViewReferenceStyle;
 };
 
 export const generate = (options: GenerateFileOptions) => {
+	const style = options.viewReferenceStyle ?? 'simple';
 	const typescriptFileContents = generateTypescriptFile(
 		options.dataModel,
-		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId))
+		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId)),
+		style
 	);
 	const disclaimer = `/*
  * This file was generated by @omnysec/cognite-codegen.
