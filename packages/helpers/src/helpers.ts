@@ -17,25 +17,23 @@ export function createHelpers<TSchema>(
 	views: ViewDefinition[]
 ): SchemaHelpers<TSchema> {
 	const viewRefByExternalId = views.reduce(
-		(acc, { externalId, space, version }) => ({
-			...acc,
-			[externalId]: {
-				externalId,
-				space,
-				version,
-				type: 'view',
-			} satisfies ViewReference,
-		}),
+		(acc, { externalId, space, version }) => {
+			const value = {externalId, space, version, type: 'view' } satisfies ViewReference;
+			return {
+				...acc,
+				// simple
+				[externalId]: value,
+				// full
+				[`${space}__${externalId}__${version}`]: value,
+			}
+		},
 		{} as Record<keyof TSchema, ViewReference>
 	);
 
 	const getView = <TView extends keyof TSchema>(externalId: TView) => {
 		const view = viewRefByExternalId[externalId];
 		return {
-			asDefinition: () =>
-				views.find((x) => x.externalId === externalId)! as ViewDefinition & {
-					externalId: TView;
-				},
+			asDefinition: () => views.find((x) => x.externalId === externalId)! as ViewDefinition,
 			asId: () => externalId,
 			asRef: (): ViewReference => view,
 			asPropertyName: (property: keyof TSchema[TView]) => String(property),
@@ -88,7 +86,7 @@ export function createHelpers<TSchema>(
 	const isKnownView = (
 		name: string | number | symbol
 	): name is keyof TSchema => {
-		return views.find((x) => x.externalId === name) !== undefined;
+		return name in viewRefByExternalId;
 	};
 
 	const isEdge = (nodeOrEdge: NodeOrEdge): nodeOrEdge is EdgeDefinition =>
@@ -227,7 +225,7 @@ export type SchemaHelpers<TSchema> = {
 };
 
 export type ViewHelpers<TSchema, TView extends keyof TSchema> = {
-	asDefinition: () => ViewDefinition & { externalId: TView };
+	asDefinition: () => ViewDefinition;
 	asId: () => TView;
 	asRef: () => ViewReference;
 	asPropertyName: (property: keyof TSchema[TView]) => string;
