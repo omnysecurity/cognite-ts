@@ -7,15 +7,33 @@ import {
 import ts from 'typescript';
 import { type ExtendedViewCorePropertyDefinition } from './types.js';
 
+export type ViewReferenceStyle = 'simple' | 'full';
+
+function getViewIdentifier(
+	view: ViewDefinition | { space: string; externalId: string; version: string },
+	style: ViewReferenceStyle
+): string {
+	switch (style) {
+		case 'simple':
+			return view.externalId;
+		case 'full':
+			return `${view.space}__${view.externalId}__${view.version}`;
+	}
+}
+
 function resolveTypeNode(
-	propSpec: ExtendedViewCorePropertyDefinition
+	propSpec: ExtendedViewCorePropertyDefinition,
+	style: ViewReferenceStyle
 ): ts.TypeNode {
 	if ('list' in propSpec.type) {
 		if (propSpec.type.list) {
-			const typeNode = resolveTypeNode({
-				...propSpec,
-				type: { ...propSpec.type, list: false },
-			});
+			const typeNode = resolveTypeNode(
+				{
+					...propSpec,
+					type: { ...propSpec.type, list: false },
+				},
+				style
+			);
 			return ts.factory.createArrayTypeNode(typeNode);
 		}
 	}
@@ -36,8 +54,11 @@ function resolveTypeNode(
 		case 'json':
 			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
 		case 'direct':
+			const targetIdentifier = propSpec.type.source
+				? getViewIdentifier(propSpec.type.source, style)
+				: 'unknown';
 			return ts.factory.createTypeReferenceNode(
-				`DirectReference<${propSpec.type.source?.externalId ?? 'unknown'}>`
+				`DirectReference<${targetIdentifier}>`
 			);
 		case 'enum':
 			if (propSpec.type.values) {
@@ -144,12 +165,15 @@ export function nullishFilter<T>(element: T | null | undefined): element is T {
 	return element !== undefined && element !== null;
 }
 
-function generateTypesForViews(views: ViewDefinition[]) {
-	return views.flatMap(generateTypeForView);
+function generateTypesForViews(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
+	return views.flatMap((view) => generateTypeForView(view, style));
 }
 
 // Function to generate TypeScript AST from the spec
-function generateTypeForView(spec: ViewDefinition) {
+function generateTypeForView(spec: ViewDefinition, style: ViewReferenceStyle) {
 	const members = Object.entries(spec.properties)
 		.map(([propName, propSpec]) => {
 			if (
@@ -163,7 +187,7 @@ function generateTypeForView(spec: ViewDefinition) {
 					(propSpec as unknown as Record<string, boolean>)['nullable']
 						? ts.factory.createToken(ts.SyntaxKind.QuestionToken)
 						: undefined,
-					resolveTypeNode(propSpec)
+					resolveTypeNode(propSpec, style)
 				);
 			} else {
 				// TODO: Direct relation-types are not exported in the SDK :shrug:
@@ -174,18 +198,23 @@ function generateTypeForView(spec: ViewDefinition) {
 
 	const typeLiteral = ts.factory.createTypeLiteralNode(members);
 	const typeExtends = (spec.implements ?? []).map((view) =>
-		ts.factory.createTypeReferenceNode(view.externalId, undefined)
+		ts.factory.createTypeReferenceNode(
+			getViewIdentifier(view, style),
+			undefined
+		)
 	);
 	const typeNode = ts.factory.createIntersectionTypeNode([
 		typeLiteral,
 		...typeExtends,
 	]);
 
+	const viewIdentifier = getViewIdentifier(spec, style);
+
 	return [
 		ts.factory.createJSDocComment(spec.description),
 		ts.factory.createTypeAliasDeclaration(
 			ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
-			ts.factory.createIdentifier(spec.externalId),
+			ts.factory.createIdentifier(viewIdentifier),
 			undefined,
 			typeNode // ts.factory.createTypeLiteralNode(members.filter(Boolean))
 		),
@@ -194,23 +223,28 @@ function generateTypeForView(spec: ViewDefinition) {
 	];
 }
 
-function generateTypeForSchema(views: ViewDefinition[]) {
+function generateTypeForSchema(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
 	return createType(
 		'__Schema',
 		ts.factory.createTypeLiteralNode(
-			views.map((view) =>
-				createProperty(
-					view.externalId,
-					ts.factory.createTypeReferenceNode(view.externalId)
-				)
-			)
+			views.map((view) => {
+				const identifier = getViewIdentifier(view, style);
+				return createProperty(
+					identifier,
+					ts.factory.createTypeReferenceNode(identifier)
+				);
+			})
 		)
 	);
 }
 
 export function generateTypescriptFile(
 	model: DataModel,
-	views: ViewDefinition[]
+	views: ViewDefinition[],
+	style: ViewReferenceStyle = 'simple'
 ) {
 	// Generate TypeScript AST for each spec
 	const sourceFile = ts.createSourceFile(
@@ -222,10 +256,12 @@ export function generateTypescriptFile(
 	);
 
 	const sourceNodes = ts.factory.createNodeArray([
-		generateTypeForSchema(views),
+		generateTypeForSchema(views, style),
 		...generateTypesForBuiltInViews(),
-		...generateTypesForViews(views),
-		createViewPropertyMap(views),
+		...generateTypesForViews(views, style),
+		createViewPropertyMap(views, style),
+		createConnectionsMetadata(views, style),
+		createEdgeTypesConstant(views),
 		createDataModelConstant(model),
 	]);
 
@@ -239,15 +275,19 @@ export function generateTypescriptFile(
 	return tsCode;
 }
 
-function createViewPropertyMap(views: ViewDefinition[]) {
+function createViewPropertyMap(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
 	const viewNameToPropertyNames = views.map((view) => {
 		const propertyNameLiterals = ts.factory.createArrayLiteralExpression(
 			Object.entries(view.properties).map(([propName, _propSpec]) =>
 				ts.factory.createStringLiteral(propName)
 			)
 		);
+		const viewIdentifier = getViewIdentifier(view, style);
 		return ts.factory.createPropertyAssignment(
-			view.externalId,
+			viewIdentifier,
 			propertyNameLiterals
 		);
 	});
@@ -258,6 +298,219 @@ function createViewPropertyMap(views: ViewDefinition[]) {
 	);
 	const declaration = ts.factory.createVariableDeclaration(
 		'__VIEWS',
+		undefined,
+		undefined,
+		ts.factory.createAsExpression(
+			objectLiteral,
+			ts.factory.createTypeReferenceNode('const')
+		)
+	);
+	const declarationList = ts.factory.createVariableDeclarationList(
+		[declaration],
+		ts.NodeFlags.Const
+	);
+
+	const statement = ts.factory.createVariableStatement(
+		ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
+		declarationList
+	);
+	return statement;
+}
+
+function createConnectionsMetadata(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
+	const viewConnections = views
+		.map((view) => {
+			const connectionProperties = Object.entries(view.properties)
+				.map(([propName, propSpec]) => {
+					if (!('connectionType' in propSpec)) return undefined;
+
+					const metadata: ts.ObjectLiteralElementLike[] = [
+						ts.factory.createPropertyAssignment(
+							'connectionType',
+							ts.factory.createStringLiteral(propSpec.connectionType)
+						),
+						ts.factory.createPropertyAssignment(
+							'source',
+							ts.factory.createStringLiteral(getViewIdentifier(view, style))
+						),
+						ts.factory.createPropertyAssignment(
+							'target',
+							ts.factory.createStringLiteral(
+								getViewIdentifier(propSpec.source, style)
+							)
+						),
+						...(propSpec.connectionType === 'multi_edge_connection' ||
+						propSpec.connectionType === 'single_edge_connection'
+							? [
+									ts.factory.createPropertyAssignment(
+										'edgeType',
+										ts.factory.createObjectLiteralExpression(
+											[
+												ts.factory.createPropertyAssignment(
+													'space',
+													ts.factory.createStringLiteral(propSpec.type.space)
+												),
+												ts.factory.createPropertyAssignment(
+													'externalId',
+													ts.factory.createStringLiteral(
+														propSpec.type.externalId
+													)
+												),
+											],
+											false
+										)
+									),
+									ts.factory.createPropertyAssignment(
+										'direction',
+										ts.factory.createStringLiteral(
+											propSpec.direction ?? 'outwards'
+										)
+									),
+									propSpec.edgeSource !== undefined
+										? ts.factory.createPropertyAssignment(
+												'edgeSource',
+												ts.factory.createStringLiteral(
+													getViewIdentifier(propSpec.edgeSource, style)
+												)
+											)
+										: undefined,
+								].filter(nullishFilter)
+							: propSpec.connectionType === 'multi_reverse_direct_relation' ||
+								  propSpec.connectionType === 'single_reverse_direct_relation'
+								? [
+										ts.factory.createPropertyAssignment(
+											'through',
+											ts.factory.createObjectLiteralExpression(
+												[
+													ts.factory.createPropertyAssignment(
+														'source',
+														ts.factory.createObjectLiteralExpression(
+															[
+																ts.factory.createPropertyAssignment(
+																	'space',
+																	ts.factory.createStringLiteral(
+																		propSpec.through.source.space
+																	)
+																),
+																ts.factory.createPropertyAssignment(
+																	'externalId',
+																	ts.factory.createStringLiteral(
+																		propSpec.through.source.externalId
+																	)
+																),
+															],
+															false
+														)
+													),
+													ts.factory.createPropertyAssignment(
+														'identifier',
+														ts.factory.createStringLiteral(
+															propSpec.through.identifier
+														)
+													),
+												],
+												true
+											)
+										),
+									]
+								: []),
+					];
+
+					return ts.factory.createPropertyAssignment(
+						propName,
+						ts.factory.createObjectLiteralExpression(metadata, true)
+					);
+				})
+				.filter(nullishFilter);
+
+			if (connectionProperties.length === 0) {
+				return undefined;
+			}
+
+			return ts.factory.createPropertyAssignment(
+				getViewIdentifier(view, style),
+				ts.factory.createObjectLiteralExpression(connectionProperties, true)
+			);
+		})
+		.filter(nullishFilter);
+
+	const objectLiteral = ts.factory.createObjectLiteralExpression(
+		viewConnections,
+		true
+	);
+	const declaration = ts.factory.createVariableDeclaration(
+		'__CONNECTIONS',
+		undefined,
+		undefined,
+		ts.factory.createAsExpression(
+			objectLiteral,
+			ts.factory.createTypeReferenceNode('const')
+		)
+	);
+	const declarationList = ts.factory.createVariableDeclarationList(
+		[declaration],
+		ts.NodeFlags.Const
+	);
+
+	const statement = ts.factory.createVariableStatement(
+		ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
+		declarationList
+	);
+	return statement;
+}
+
+function createEdgeTypesConstant(views: ViewDefinition[]) {
+	const edgeTypes = new Map<string, { space: string; externalId: string }>();
+
+	views.forEach((view) => {
+		Object.entries(view.properties).forEach(([_, propSpec]) => {
+			if ('connectionType' in propSpec) {
+				// Only process edge connections (not reverse direct relations)
+				if (
+					propSpec.connectionType === 'multi_edge_connection' ||
+					propSpec.connectionType === 'single_edge_connection'
+				) {
+					const key = `${propSpec.type.space}:${propSpec.type.externalId}`;
+					if (!edgeTypes.has(key)) {
+						edgeTypes.set(key, {
+							space: propSpec.type.space,
+							externalId: propSpec.type.externalId,
+						});
+					}
+				}
+			}
+		});
+	});
+
+	const edgeTypeProperties = Array.from(edgeTypes.values()).map((edgeType) =>
+		ts.factory.createPropertyAssignment(
+			// TODO: allow fully quallified ID reference
+			edgeType.externalId,
+			ts.factory.createObjectLiteralExpression(
+				[
+					ts.factory.createPropertyAssignment(
+						'space',
+						ts.factory.createStringLiteral(edgeType.space)
+					),
+					ts.factory.createPropertyAssignment(
+						'externalId',
+						ts.factory.createStringLiteral(edgeType.externalId)
+					),
+				],
+				false
+			)
+		)
+	);
+
+	const objectLiteral = ts.factory.createObjectLiteralExpression(
+		edgeTypeProperties,
+		true
+	);
+	const declaration = ts.factory.createVariableDeclaration(
+		'__EDGE_TYPES',
 		undefined,
 		undefined,
 		ts.factory.createAsExpression(
@@ -320,12 +573,15 @@ function createDataModelConstant(model: DataModel) {
 type GenerateFileOptions = {
 	dataModel: DataModel;
 	views: ViewDefinition[];
+	viewReferenceStyle?: ViewReferenceStyle;
 };
 
 export const generate = (options: GenerateFileOptions) => {
+	const style = options.viewReferenceStyle ?? 'simple';
 	const typescriptFileContents = generateTypescriptFile(
 		options.dataModel,
-		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId))
+		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId)),
+		style
 	);
 	const disclaimer = `/*
  * This file was generated by @omnysec/cognite-codegen.

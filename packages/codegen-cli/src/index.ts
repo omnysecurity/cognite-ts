@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import { writeFile } from 'fs/promises';
 import { CogniteClient } from '@cognite/sdk';
-import { generate } from '@omnysecurity/cognite-codegen';
+import {
+	generate,
+	type ViewReferenceStyle,
+} from '@omnysecurity/cognite-codegen';
 import { config } from 'dotenv';
 import meow from 'meow';
 
@@ -38,6 +41,9 @@ export const main = async (options: Options) => {
 	const output = generate({
 		dataModel,
 		views: views.items,
+		...(options.viewReferenceStyle && {
+			viewReferenceStyle: options.viewReferenceStyle,
+		}),
 	});
 
 	await writeFile(options.output ?? output.fileName, output.fileContent);
@@ -51,6 +57,7 @@ type Options = {
 	model: string;
 	version: string;
 	output?: string;
+	viewReferenceStyle?: ViewReferenceStyle;
 };
 
 config();
@@ -64,13 +71,15 @@ const cli = meow(
     --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com or COGNITE_CLUSTER env var)
     --project,   -p  CDF Project (or COGNITE_PROJECT env var)
     --space,     -s  CDF Model Space (or COGNITE_SPACE env var)
-		--model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
-		--version    -v  CDF Data model version (or COGNITE_VERSION env var)
-    --output,    -o  Output file (default: schema.ts)
+    --model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
+    --version    -v  CDF Data model version (or COGNITE_VERSION env var)
+    --output,    -o  Output file (default: <externalId>@<version>.ts)
     --token,     -t  CDF Access token (or COGNITE_TOKEN env var)
+    --reference-style    View reference style: simple or full (default: simple or COGNITE_REFERENCE_STYLE env var)
 
 	Examples
 	  $ node . --model my-model --version 1_4 --output schema.ts
+	  $ node . --model my-model --version 1_4 --reference-style full
 `,
 	{
 		importMeta: import.meta, // This is required
@@ -117,12 +126,15 @@ const cli = meow(
 					default: process.env.COGNITE_TOKEN,
 				}),
 			},
+			referenceStyle: {
+				type: 'string',
+				default: process.env.COGNITE_REFERENCE_STYLE ?? 'simple',
+			},
 		},
 	}
 );
 
 // Validate required options are present (either from CLI or env)
-const options = cli.flags as Options;
 const requiredFields = [
 	'project',
 	'space',
@@ -130,7 +142,7 @@ const requiredFields = [
 	'version',
 	'token',
 ] as const;
-const missingFields = requiredFields.filter((field) => !options[field]);
+const missingFields = requiredFields.filter((field) => !cli.flags[field]);
 
 if (missingFields.length > 0) {
 	console.error(
@@ -138,6 +150,29 @@ if (missingFields.length > 0) {
 	);
 	process.exit(1);
 }
+
+// Validate reference style
+const validStyles: ViewReferenceStyle[] = ['simple', 'full'];
+const referenceStyle = cli.flags.referenceStyle as
+	| ViewReferenceStyle
+	| undefined;
+if (referenceStyle && !validStyles.includes(referenceStyle)) {
+	console.error(
+		`Invalid reference style: ${referenceStyle}\nMust be one of: ${validStyles.join(', ')}`
+	);
+	process.exit(1);
+}
+
+const options: Options = {
+	token: cli.flags.token!,
+	cluster: cli.flags.cluster!,
+	project: cli.flags.project!,
+	space: cli.flags.space!,
+	model: cli.flags.model!,
+	version: cli.flags.version!,
+	...(cli.flags.output && { output: cli.flags.output }),
+	...(referenceStyle && { viewReferenceStyle: referenceStyle }),
+};
 
 main(options)
 	.then((res) => console.log('Success', res))
