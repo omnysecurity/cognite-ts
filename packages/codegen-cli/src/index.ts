@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import { writeFile } from 'fs/promises';
 import { CogniteClient } from '@cognite/sdk';
-import { generate, type ViewReferenceStyle } from '@omnysecurity/cognite-codegen';
+import {
+	generate,
+	type ViewReferenceStyle,
+} from '@omnysecurity/cognite-codegen';
 import { config } from 'dotenv';
 import meow from 'meow';
 
@@ -20,7 +23,7 @@ export const main = async (options: Options) => {
 				space: options.space,
 				version: options.version,
 			},
-		])		
+		])
 		.then((res) => res.items.at(0));
 
 	if (!dataModel) throw new Error('Data model not found');
@@ -38,7 +41,9 @@ export const main = async (options: Options) => {
 	const output = generate({
 		dataModel,
 		views: views.items,
-		...(options.viewReferenceStyle && { viewReferenceStyle: options.viewReferenceStyle }),
+		...(options.viewReferenceStyle && {
+			viewReferenceStyle: options.viewReferenceStyle,
+		}),
 	});
 
 	await writeFile(options.output ?? output.fileName, output.fileContent);
@@ -70,11 +75,11 @@ const cli = meow(
     --version    -v  CDF Data model version (or COGNITE_VERSION env var)
     --output,    -o  Output file (default: <externalId>@<version>.ts)
     --token,     -t  CDF Access token (or COGNITE_TOKEN env var)
-    --reference-style    View reference style: simple, namespaced, or versioned (default: simple or COGNITE_REFERENCE_STYLE env var)
+    --reference-style    View reference style: simple or full (default: simple or COGNITE_REFERENCE_STYLE env var)
 
 	Examples
 	  $ node . --model my-model --version 1_4 --output schema.ts
-	  $ node . --model my-model --version 1_4 --reference-style namespaced
+	  $ node . --model my-model --version 1_4 --reference-style full
 `,
 	{
 		importMeta: import.meta, // This is required
@@ -147,8 +152,10 @@ if (missingFields.length > 0) {
 }
 
 // Validate reference style
-const validStyles: ViewReferenceStyle[] = ['simple', 'namespaced', 'versioned'];
-const referenceStyle = cli.flags.referenceStyle as ViewReferenceStyle | undefined;
+const validStyles: ViewReferenceStyle[] = ['simple', 'full'];
+const referenceStyle = cli.flags.referenceStyle as
+	| ViewReferenceStyle
+	| undefined;
 if (referenceStyle && !validStyles.includes(referenceStyle)) {
 	console.error(
 		`Invalid reference style: ${referenceStyle}\nMust be one of: ${validStyles.join(', ')}`

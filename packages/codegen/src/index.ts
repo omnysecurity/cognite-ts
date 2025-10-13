@@ -7,7 +7,7 @@ import {
 import ts from 'typescript';
 import { type ExtendedViewCorePropertyDefinition } from './types.js';
 
-export type ViewReferenceStyle = 'simple' | 'namespaced' | 'versioned';
+export type ViewReferenceStyle = 'simple' | 'full';
 
 function getViewIdentifier(
 	view: ViewDefinition | { space: string; externalId: string; version: string },
@@ -16,10 +16,8 @@ function getViewIdentifier(
 	switch (style) {
 		case 'simple':
 			return view.externalId;
-		case 'namespaced':
-			return `${view.space}_${view.externalId}`;
-		case 'versioned':
-			return `${view.space}_${view.externalId}_${view.version}`;
+		case 'full':
+			return `${view.space}__${view.externalId}__${view.version}`;
 	}
 }
 
@@ -29,10 +27,13 @@ function resolveTypeNode(
 ): ts.TypeNode {
 	if ('list' in propSpec.type) {
 		if (propSpec.type.list) {
-			const typeNode = resolveTypeNode({
-				...propSpec,
-				type: { ...propSpec.type, list: false },
-			}, style);
+			const typeNode = resolveTypeNode(
+				{
+					...propSpec,
+					type: { ...propSpec.type, list: false },
+				},
+				style
+			);
 			return ts.factory.createArrayTypeNode(typeNode);
 		}
 	}
@@ -164,8 +165,11 @@ export function nullishFilter<T>(element: T | null | undefined): element is T {
 	return element !== undefined && element !== null;
 }
 
-function generateTypesForViews(views: ViewDefinition[], style: ViewReferenceStyle) {
-	return views.flatMap(view => generateTypeForView(view, style));
+function generateTypesForViews(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
+	return views.flatMap((view) => generateTypeForView(view, style));
 }
 
 // Function to generate TypeScript AST from the spec
@@ -194,7 +198,10 @@ function generateTypeForView(spec: ViewDefinition, style: ViewReferenceStyle) {
 
 	const typeLiteral = ts.factory.createTypeLiteralNode(members);
 	const typeExtends = (spec.implements ?? []).map((view) =>
-		ts.factory.createTypeReferenceNode(getViewIdentifier(view, style), undefined)
+		ts.factory.createTypeReferenceNode(
+			getViewIdentifier(view, style),
+			undefined
+		)
 	);
 	const typeNode = ts.factory.createIntersectionTypeNode([
 		typeLiteral,
@@ -216,7 +223,10 @@ function generateTypeForView(spec: ViewDefinition, style: ViewReferenceStyle) {
 	];
 }
 
-function generateTypeForSchema(views: ViewDefinition[], style: ViewReferenceStyle) {
+function generateTypeForSchema(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
 	return createType(
 		'__Schema',
 		ts.factory.createTypeLiteralNode(
@@ -265,7 +275,10 @@ export function generateTypescriptFile(
 	return tsCode;
 }
 
-function createViewPropertyMap(views: ViewDefinition[], style: ViewReferenceStyle) {
+function createViewPropertyMap(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
 	const viewNameToPropertyNames = views.map((view) => {
 		const propertyNameLiterals = ts.factory.createArrayLiteralExpression(
 			Object.entries(view.properties).map(([propName, _propSpec]) =>
@@ -304,91 +317,125 @@ function createViewPropertyMap(views: ViewDefinition[], style: ViewReferenceStyl
 	return statement;
 }
 
-function createConnectionsMetadata(views: ViewDefinition[], style: ViewReferenceStyle) {
-	const viewConnections = views.map((view) => {
-		const connectionProperties = Object.entries(view.properties)
-			.map(([propName, propSpec]) => {
-				if (!("connectionType" in propSpec)) return undefined;
+function createConnectionsMetadata(
+	views: ViewDefinition[],
+	style: ViewReferenceStyle
+) {
+	const viewConnections = views
+		.map((view) => {
+			const connectionProperties = Object.entries(view.properties)
+				.map(([propName, propSpec]) => {
+					if (!('connectionType' in propSpec)) return undefined;
 
-				const metadata: ts.ObjectLiteralElementLike[] = [
-					ts.factory.createPropertyAssignment(
-						'connectionType',
-						ts.factory.createStringLiteral(propSpec.connectionType)
-					),
-					ts.factory.createPropertyAssignment(
-						'source',
-						ts.factory.createStringLiteral(getViewIdentifier(view, style))
-					),
-					ts.factory.createPropertyAssignment(
-						'target',
-						ts.factory.createStringLiteral(getViewIdentifier(propSpec.source, style))
-					),
-					...(
-						propSpec.connectionType === 'multi_edge_connection' || propSpec.connectionType === 'single_edge_connection'
-							? [
-								ts.factory.createPropertyAssignment(
-									'edgeType',
-									ts.factory.createObjectLiteralExpression([
-											ts.factory.createPropertyAssignment(
-												'space',
-												ts.factory.createStringLiteral(propSpec.type.space)
-											),
-											ts.factory.createPropertyAssignment(
-												'externalId',
-												ts.factory.createStringLiteral(propSpec.type.externalId)
-											),
-										], false)
-								),
-								ts.factory.createPropertyAssignment('direction', ts.factory.createStringLiteral(propSpec.direction ?? "outwards")),
-								propSpec.edgeSource !== undefined
-									? ts.factory.createPropertyAssignment('edgeSource', ts.factory.createStringLiteral(getViewIdentifier(propSpec.edgeSource, style)))
-									: undefined
-							].filter(nullishFilter)
-							: propSpec.connectionType === "multi_reverse_direct_relation" || propSpec.connectionType === 'single_reverse_direct_relation' ?
-							[
-								ts.factory.createPropertyAssignment(
-								'through',
-								ts.factory.createObjectLiteralExpression([
-									ts.factory.createPropertyAssignment(
-										'source',
-										ts.factory.createObjectLiteralExpression([
-											ts.factory.createPropertyAssignment(
-												'space',
-												ts.factory.createStringLiteral(propSpec.through.source.space)
-											),
-											ts.factory.createPropertyAssignment(
-												'externalId',
-												ts.factory.createStringLiteral(propSpec.through.source.externalId)
-											),
-										], false)
-									),
-									ts.factory.createPropertyAssignment(
-										'identifier',
-										ts.factory.createStringLiteral(propSpec.through.identifier)
-									),
-								], true)
+					const metadata: ts.ObjectLiteralElementLike[] = [
+						ts.factory.createPropertyAssignment(
+							'connectionType',
+							ts.factory.createStringLiteral(propSpec.connectionType)
+						),
+						ts.factory.createPropertyAssignment(
+							'source',
+							ts.factory.createStringLiteral(getViewIdentifier(view, style))
+						),
+						ts.factory.createPropertyAssignment(
+							'target',
+							ts.factory.createStringLiteral(
+								getViewIdentifier(propSpec.source, style)
 							)
-							]
-							: []
-					)
-				];
+						),
+						...(propSpec.connectionType === 'multi_edge_connection' ||
+						propSpec.connectionType === 'single_edge_connection'
+							? [
+									ts.factory.createPropertyAssignment(
+										'edgeType',
+										ts.factory.createObjectLiteralExpression(
+											[
+												ts.factory.createPropertyAssignment(
+													'space',
+													ts.factory.createStringLiteral(propSpec.type.space)
+												),
+												ts.factory.createPropertyAssignment(
+													'externalId',
+													ts.factory.createStringLiteral(
+														propSpec.type.externalId
+													)
+												),
+											],
+											false
+										)
+									),
+									ts.factory.createPropertyAssignment(
+										'direction',
+										ts.factory.createStringLiteral(
+											propSpec.direction ?? 'outwards'
+										)
+									),
+									propSpec.edgeSource !== undefined
+										? ts.factory.createPropertyAssignment(
+												'edgeSource',
+												ts.factory.createStringLiteral(
+													getViewIdentifier(propSpec.edgeSource, style)
+												)
+											)
+										: undefined,
+								].filter(nullishFilter)
+							: propSpec.connectionType === 'multi_reverse_direct_relation' ||
+								  propSpec.connectionType === 'single_reverse_direct_relation'
+								? [
+										ts.factory.createPropertyAssignment(
+											'through',
+											ts.factory.createObjectLiteralExpression(
+												[
+													ts.factory.createPropertyAssignment(
+														'source',
+														ts.factory.createObjectLiteralExpression(
+															[
+																ts.factory.createPropertyAssignment(
+																	'space',
+																	ts.factory.createStringLiteral(
+																		propSpec.through.source.space
+																	)
+																),
+																ts.factory.createPropertyAssignment(
+																	'externalId',
+																	ts.factory.createStringLiteral(
+																		propSpec.through.source.externalId
+																	)
+																),
+															],
+															false
+														)
+													),
+													ts.factory.createPropertyAssignment(
+														'identifier',
+														ts.factory.createStringLiteral(
+															propSpec.through.identifier
+														)
+													),
+												],
+												true
+											)
+										),
+									]
+								: []),
+					];
 
+					return ts.factory.createPropertyAssignment(
+						propName,
+						ts.factory.createObjectLiteralExpression(metadata, true)
+					);
+				})
+				.filter(nullishFilter);
 
-				return ts.factory.createPropertyAssignment(
-					propName,
-					ts.factory.createObjectLiteralExpression(metadata, true)
-				);
-			}).filter(nullishFilter);
+			if (connectionProperties.length === 0) {
+				return undefined;
+			}
 
-		if (connectionProperties.length === 0) {
-			return undefined;
-		}
-
-		return ts.factory.createPropertyAssignment(
-			getViewIdentifier(view, style),
-			ts.factory.createObjectLiteralExpression(connectionProperties, true)
-		);
-	}).filter(nullishFilter);
+			return ts.factory.createPropertyAssignment(
+				getViewIdentifier(view, style),
+				ts.factory.createObjectLiteralExpression(connectionProperties, true)
+			);
+		})
+		.filter(nullishFilter);
 
 	const objectLiteral = ts.factory.createObjectLiteralExpression(
 		viewConnections,
@@ -420,11 +467,11 @@ function createEdgeTypesConstant(views: ViewDefinition[]) {
 
 	views.forEach((view) => {
 		Object.entries(view.properties).forEach(([_, propSpec]) => {
-			if ("connectionType" in propSpec) {
+			if ('connectionType' in propSpec) {
 				// Only process edge connections (not reverse direct relations)
 				if (
-					(propSpec.connectionType === 'multi_edge_connection' ||
-					 propSpec.connectionType === 'single_edge_connection')
+					propSpec.connectionType === 'multi_edge_connection' ||
+					propSpec.connectionType === 'single_edge_connection'
 				) {
 					const key = `${propSpec.type.space}:${propSpec.type.externalId}`;
 					if (!edgeTypes.has(key)) {
@@ -442,16 +489,19 @@ function createEdgeTypesConstant(views: ViewDefinition[]) {
 		ts.factory.createPropertyAssignment(
 			// TODO: allow fully quallified ID reference
 			edgeType.externalId,
-			ts.factory.createObjectLiteralExpression([
-				ts.factory.createPropertyAssignment(
-					'space',
-					ts.factory.createStringLiteral(edgeType.space)
-				),
-				ts.factory.createPropertyAssignment(
-					'externalId',
-					ts.factory.createStringLiteral(edgeType.externalId)
-				),
-			], false)
+			ts.factory.createObjectLiteralExpression(
+				[
+					ts.factory.createPropertyAssignment(
+						'space',
+						ts.factory.createStringLiteral(edgeType.space)
+					),
+					ts.factory.createPropertyAssignment(
+						'externalId',
+						ts.factory.createStringLiteral(edgeType.externalId)
+					),
+				],
+				false
+			)
 		)
 	);
 
