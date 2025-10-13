@@ -21,7 +21,7 @@ export function createHelpers<TSchema>(
 		externalId: string;
 		version: string;
 	}) => {
-		return `${view.space}_${view.externalId}_${view.version}`;
+		return `${view.space}__${view.externalId}__${view.version}`;
 	};
 
 	const viewRefByExternalId = views.reduce(

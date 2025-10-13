@@ -23,7 +23,7 @@ describe('SchemaHelpers', () => {
 			type: 'view',
 		} satisfies ViewReference;
 		expect(view.asDefinition()).toStrictEqual(__VIEWS[0]);
-		expect(view.asId()).toBe('__Dummy');
+		expect(view.asId()).toBe('test____Dummy__1');
 		expect(view.asPropertyName('a')).toBe('a');
 		expect(view.asPropertyRef('b')).toStrictEqual(['test', '__Dummy/1', 'b']);
 		expect(view.asRef()).toStrictEqual(expectedViewReference);
