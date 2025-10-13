@@ -20,7 +20,7 @@ export const main = async (options: Options) => {
 				space: options.space,
 				version: options.version,
 			},
-		])
+		])		
 		.then((res) => res.items.at(0));
 
 	if (!dataModel) throw new Error('Data model not found');
@@ -64,9 +64,9 @@ const cli = meow(
     --cluster,   -c  CDF Cluster (default: https://westeurope-1.cognitedata.com or COGNITE_CLUSTER env var)
     --project,   -p  CDF Project (or COGNITE_PROJECT env var)
     --space,     -s  CDF Model Space (or COGNITE_SPACE env var)
-		--model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
-		--version    -v  CDF Data model version (or COGNITE_VERSION env var)
-    --output,    -o  Output file (default: schema.ts)
+    --model      -m  CDF Data model externalId (or COGNITE_MODEL env var)
+    --version    -v  CDF Data model version (or COGNITE_VERSION env var)
+    --output,    -o  Output file (default: <externalId>@<version>.ts)
     --token,     -t  CDF Access token (or COGNITE_TOKEN env var)
 
 	Examples
