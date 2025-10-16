@@ -16,16 +16,28 @@ import type {
 export function createHelpers<TSchema>(
 	views: ViewDefinition[]
 ): SchemaHelpers<TSchema> {
+	const getViewId = (view: {
+		space: string;
+		externalId: string;
+		version: string;
+	}) => {
+		return `${view.space}__${view.externalId}__${view.version}`;
+	};
+
 	const viewRefByExternalId = views.reduce(
-		(acc, { externalId, space, version }) => ({
-			...acc,
-			[externalId]: {
+		(acc, { externalId, space, version }) => {
+			const value = {
 				externalId,
 				space,
 				version,
 				type: 'view',
-			} satisfies ViewReference,
-		}),
+			} satisfies ViewReference;
+			return {
+				...acc,
+				[externalId]: value, // simple
+				[getViewId({ space, externalId, version })]: value, // full
+			};
+		},
 		{} as Record<keyof TSchema, ViewReference>
 	);
 
@@ -33,10 +45,13 @@ export function createHelpers<TSchema>(
 		const view = viewRefByExternalId[externalId];
 		return {
 			asDefinition: () =>
-				views.find((x) => x.externalId === externalId)! as ViewDefinition & {
-					externalId: TView;
-				},
-			asId: () => externalId,
+				views.find(
+					(x) =>
+						x.space === view.space &&
+						x.externalId === view.externalId &&
+						x.version === view.version
+				)! as ViewDefinition,
+			asId: () => getViewId(view) as unknown as TView,
 			asRef: (): ViewReference => view,
 			asPropertyName: (property: keyof TSchema[TView]) => String(property),
 			asPropertyRef: (property: keyof TSchema[TView]) => [
@@ -88,7 +103,7 @@ export function createHelpers<TSchema>(
 	const isKnownView = (
 		name: string | number | symbol
 	): name is keyof TSchema => {
-		return views.find((x) => x.externalId === name) !== undefined;
+		return name in viewRefByExternalId;
 	};
 
 	const isEdge = (nodeOrEdge: NodeOrEdge): nodeOrEdge is EdgeDefinition =>
@@ -169,6 +184,7 @@ export function createHelpers<TSchema>(
 		createNodeWrite,
 		createEdgeWrite,
 		getView,
+		getViewId,
 		getNodeProps,
 		getEdgeProps,
 		isNode,
@@ -204,6 +220,11 @@ export type SchemaHelpers<TSchema> = {
 	getView: <TView extends keyof TSchema>(
 		externalId: TView
 	) => ViewHelpers<TSchema, TView>;
+	getViewId: (view: {
+		space: string;
+		externalId: string;
+		version: string;
+	}) => string;
 	isKnownView: (viewId: string | number | symbol) => viewId is keyof TSchema;
 	createNodeWrite: <TView extends keyof TSchema, TProp extends TSchema[TView]>(
 		externalId: TView,
@@ -227,7 +248,7 @@ export type SchemaHelpers<TSchema> = {
 };
 
 export type ViewHelpers<TSchema, TView extends keyof TSchema> = {
-	asDefinition: () => ViewDefinition & { externalId: TView };
+	asDefinition: () => ViewDefinition;
 	asId: () => TView;
 	asRef: () => ViewReference;
 	asPropertyName: (property: keyof TSchema[TView]) => string;
