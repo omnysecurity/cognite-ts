@@ -1,5 +1,11 @@
 # @omnysecurity/cognite-codegen-cli
 
+## 0.1.3
+
+### Patch Changes
+
+- a6abd18: Adds support for providing arguments through .env in addition to flags
+
 ## 0.1.2
 
 ### Patch Changes

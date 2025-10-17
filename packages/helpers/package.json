@@ -1,6 +1,6 @@
 {
 	"name": "@omnysecurity/cognite-helpers",
-	"version": "0.1.3",
+	"version": "0.2.0",
 	"private": false,
 	"description": "Enhanced TypeScript support for Cognite Data Fusion APIs",
 	"keywords": [
