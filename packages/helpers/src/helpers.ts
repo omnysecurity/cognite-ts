@@ -13,30 +13,129 @@ import type {
 	ViewReference,
 } from '@cognite/sdk';
 
+// Extract all possible view reference candidates from schema (including ambiguous ones)
+type ViewReferenceCandidate<TSchema> = keyof TSchema extends infer K
+	? K extends `${infer S}__${infer E}__${infer V}` // full
+		? `${S}__${E}__${V}` | `${S}__${E}` | E
+		: K extends `${infer S}__${infer E}` // versioned
+			? `${S}__${E}` | E
+			: K // simple
+	: never;
+
+// Helper to collect all matching values
+type CollectMatches<
+	TSchema,
+	TRef extends ViewReferenceCandidate<TSchema>,
+> = keyof TSchema extends infer K
+	? K extends keyof TSchema
+		? K extends `${infer S}__${infer E}__${infer V}`
+			? TRef extends `${S}__${E}__${V}` | `${S}__${E}` | E
+				? TSchema[K]
+				: never
+			: K extends `${infer S}__${infer E}`
+				? TRef extends `${S}__${E}` | E
+					? TSchema[K]
+					: never
+				: TRef extends K
+					? TSchema[K]
+					: never
+		: never
+	: never;
+
+// Helper to check if a union is a single value
+// This works by checking if T distributes into multiple branches
+type IsUnion<T, U = T> = T extends any
+	? [U] extends [T]
+		? false
+		: true
+	: false;
+
+type IsSingleValue<T> = [T] extends [never]
+	? unknown
+	: IsUnion<T> extends true
+		? unknown
+		: T;
+
+// Helper to resolve a view reference to the actual schema key(s)
+export type ResolveViewKey<
+	TSchema,
+	TRef extends ViewReferenceCandidate<TSchema>,
+> = keyof TSchema extends infer K
+	? K extends keyof TSchema
+		? K extends `${infer S}__${infer E}__${infer V}`
+			? TRef extends `${S}__${E}__${V}` | `${S}__${E}` | E
+				? K
+				: never
+			: K extends `${infer S}__${infer E}`
+				? TRef extends `${S}__${E}` | E
+					? K
+					: never
+				: K extends TRef
+					? K
+					: never
+		: never
+	: never;
+
+// Resolves to the value if unique, undefined otherwise
+export type ResolveView<
+	TSchema,
+	TRef extends ViewReferenceCandidate<TSchema>,
+> = IsSingleValue<CollectMatches<TSchema, TRef>>;
+
+// Extract only non-ambiguous view references (those that resolve to a single value)
+export type UnambiguousViewReference<TSchema> =
+	Extract<ViewReferenceCandidate<TSchema>, string> extends infer TRef extends
+		string
+		? TRef extends ViewReferenceCandidate<TSchema>
+			? unknown extends ResolveView<TSchema, TRef>
+				? never
+				: TRef
+			: never
+		: never;
+
 export function createHelpers<TSchema>(
 	views: ViewDefinition[]
 ): SchemaHelpers<TSchema> {
+	const getViewId = (view: {
+		space: string;
+		externalId: string;
+		version: string;
+	}) => {
+		return `${view.space}__${view.externalId}__${view.version}`;
+	};
+
 	const viewRefByExternalId = views.reduce(
-		(acc, { externalId, space, version }) => ({
-			...acc,
-			[externalId]: {
+		(acc, { externalId, space, version }) => {
+			const value = {
 				externalId,
 				space,
 				version,
 				type: 'view',
-			} satisfies ViewReference,
-		}),
+			} satisfies ViewReference;
+			return {
+				...acc,
+				[externalId]: value, // simple
+				[`${space}__${externalId}`]: value, // versioned
+				[getViewId({ space, externalId, version })]: value, // full
+			};
+		},
 		{} as Record<keyof TSchema, ViewReference>
 	);
 
-	const getView = <TView extends keyof TSchema>(externalId: TView) => {
-		const view = viewRefByExternalId[externalId];
+	const getView = <TRef extends UnambiguousViewReference<TSchema>>(
+		viewRef: TRef
+	) => {
+		const view = viewRefByExternalId[viewRef as keyof TSchema];
+		type TView = ResolveViewKey<TSchema, TRef>;
 		return {
 			asDefinition: () =>
-				views.find((x) => x.externalId === externalId)! as ViewDefinition & {
-					externalId: TView;
-				},
-			asId: () => externalId,
+				views.find(
+					(x) =>
+						x.space === view.space &&
+						x.externalId === view.externalId &&
+						x.version === view.version
+				)! as ViewDefinition,
+			asId: () => getViewId(view) as unknown as TView,
 			asRef: (): ViewReference => view,
 			asPropertyName: (property: keyof TSchema[TView]) => String(property),
 			asPropertyRef: (property: keyof TSchema[TView]) => [
@@ -87,8 +186,8 @@ export function createHelpers<TSchema>(
 
 	const isKnownView = (
 		name: string | number | symbol
-	): name is keyof TSchema => {
-		return views.find((x) => x.externalId === name) !== undefined;
+	): name is UnambiguousViewReference<TSchema> => {
+		return name in viewRefByExternalId;
 	};
 
 	const isEdge = (nodeOrEdge: NodeOrEdge): nodeOrEdge is EdgeDefinition =>
@@ -97,11 +196,11 @@ export function createHelpers<TSchema>(
 	const isNode = (nodeOrEdge: NodeOrEdge): nodeOrEdge is NodeDefinition =>
 		nodeOrEdge.instanceType === 'node';
 
-	const getNodeProps = <TView extends keyof TSchema>(
+	const getNodeProps = <TRef extends UnambiguousViewReference<TSchema>>(
 		instance: NodeOrEdge,
-		viewExternalId: TView
-	): null | (NodeDefinition & TSchema[TView]) => {
-		const props = getView(viewExternalId).getProps(instance);
+		viewRef: TRef
+	): null | (NodeDefinition & TSchema[ResolveViewKey<TSchema, TRef>]) => {
+		const props = getView(viewRef).getProps(instance);
 		return isNode(instance) && props
 			? {
 					...instance,
@@ -111,13 +210,13 @@ export function createHelpers<TSchema>(
 	};
 
 	const createNodeWrite = <
-		TView extends keyof TSchema,
-		TProp extends TSchema[TView],
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends TSchema[ResolveViewKey<TSchema, TRef>],
 	>(
-		externalId: TView,
-		options: NodeWriteOptions<TSchema, TView, TProp>
+		viewRef: TRef,
+		options: NodeWriteOptions<TSchema, ResolveViewKey<TSchema, TRef>, TProp>
 	) => {
-		const view = getView(externalId);
+		const view = getView(viewRef);
 		const { properties, ...node } = options;
 		return {
 			...node,
@@ -132,13 +231,13 @@ export function createHelpers<TSchema>(
 	};
 
 	const createEdgeWrite = <
-		TView extends keyof TSchema,
-		TProp extends TSchema[TView],
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends TSchema[ResolveViewKey<TSchema, TRef>],
 	>(
-		externalId: TView,
-		options: EdgeWriteOptions<TSchema, TView, TProp>
+		viewRef: TRef,
+		options: EdgeWriteOptions<TSchema, ResolveViewKey<TSchema, TRef>, TProp>
 	) => {
-		const view = getView(externalId);
+		const view = getView(viewRef);
 		const { properties, ...edge } = options;
 		return {
 			...edge,
@@ -152,11 +251,11 @@ export function createHelpers<TSchema>(
 		} satisfies EdgeWrite;
 	};
 
-	const getEdgeProps = <TView extends keyof TSchema>(
+	const getEdgeProps = <TRef extends UnambiguousViewReference<TSchema>>(
 		instance: NodeOrEdge,
-		viewExternalId: TView
-	): null | (EdgeDefinition & TSchema[TView]) => {
-		const props = getView(viewExternalId).getProps(instance);
+		viewRef: TRef
+	): null | (EdgeDefinition & TSchema[ResolveViewKey<TSchema, TRef>]) => {
+		const props = getView(viewRef).getProps(instance);
 		return isEdge(instance) && props
 			? {
 					...instance,
@@ -169,6 +268,7 @@ export function createHelpers<TSchema>(
 		createNodeWrite,
 		createEdgeWrite,
 		getView,
+		getViewId,
 		getNodeProps,
 		getEdgeProps,
 		isNode,
@@ -201,33 +301,46 @@ type EdgeWriteOptions<
 };
 
 export type SchemaHelpers<TSchema> = {
-	getView: <TView extends keyof TSchema>(
-		externalId: TView
-	) => ViewHelpers<TSchema, TView>;
-	isKnownView: (viewId: string | number | symbol) => viewId is keyof TSchema;
-	createNodeWrite: <TView extends keyof TSchema, TProp extends TSchema[TView]>(
-		externalId: TView,
-		options: NodeWriteOptions<TSchema, TView, TProp>
+	getView: <TRef extends UnambiguousViewReference<TSchema>>(
+		viewRef: TRef
+	) => ViewHelpers<TSchema, ResolveViewKey<TSchema, TRef>>;
+	getViewId: (view: {
+		space: string;
+		externalId: string;
+		version: string;
+	}) => string;
+	isKnownView: (
+		viewId: string | number | symbol
+	) => viewId is UnambiguousViewReference<TSchema>;
+	createNodeWrite: <
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends TSchema[ResolveViewKey<TSchema, TRef>],
+	>(
+		viewRef: TRef,
+		options: NodeWriteOptions<TSchema, ResolveViewKey<TSchema, TRef>, TProp>
 	) => NodeWrite;
-	createEdgeWrite: <TView extends keyof TSchema, TProp extends TSchema[TView]>(
-		externalId: TView,
-		options: EdgeWriteOptions<TSchema, TView, TProp>
+	createEdgeWrite: <
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends TSchema[ResolveViewKey<TSchema, TRef>],
+	>(
+		viewRef: TRef,
+		options: EdgeWriteOptions<TSchema, ResolveViewKey<TSchema, TRef>, TProp>
 	) => EdgeWrite;
-	getNodeProps: <TView extends keyof TSchema>(
+	getNodeProps: <TRef extends UnambiguousViewReference<TSchema>>(
 		instance: NodeOrEdge,
-		viewExternalId: TView
-	) => (NodeDefinition & TSchema[TView]) | null;
-	getEdgeProps: <TView extends keyof TSchema>(
+		viewRef: TRef
+	) => (NodeDefinition & TSchema[ResolveViewKey<TSchema, TRef>]) | null;
+	getEdgeProps: <TRef extends UnambiguousViewReference<TSchema>>(
 		instance: NodeOrEdge,
-		viewExternalId: TView
-	) => (EdgeDefinition & TSchema[TView]) | null;
+		viewRef: TRef
+	) => (EdgeDefinition & TSchema[ResolveViewKey<TSchema, TRef>]) | null;
 	isNode: (nodeOrEdge: NodeOrEdge) => nodeOrEdge is NodeDefinition;
 	isEdge: (nodeOrEdge: NodeOrEdge) => nodeOrEdge is EdgeDefinition;
 	__views: ViewDefinition[];
 };
 
 export type ViewHelpers<TSchema, TView extends keyof TSchema> = {
-	asDefinition: () => ViewDefinition & { externalId: TView };
+	asDefinition: () => ViewDefinition;
 	asId: () => TView;
 	asRef: () => ViewReference;
 	asPropertyName: (property: keyof TSchema[TView]) => string;
