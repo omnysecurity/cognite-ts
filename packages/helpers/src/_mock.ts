@@ -1,13 +1,16 @@
 import type { DirectRelationReference, ViewDefinition } from '@cognite/sdk';
 
-export type __Dummy = {
+export type TestView1 = {
 	a: string;
 	b: number;
 	c: DirectRelationReference;
 	d: string[];
 };
-export type __Stub = { a: string; b: number };
-export type __Schema = { __Dummy: __Dummy; __Stub: __Stub };
+export type TestView2 = { a: string; b: number };
+export type __Schema = {
+	test__TestView1__1: TestView1;
+	TestView2: TestView2;
+};
 
 const space = 'test';
 
@@ -18,12 +21,12 @@ type MockViewDefinition = Pick<
 const mockViews: MockViewDefinition[] = [
 	{
 		space,
-		externalId: '__Dummy',
+		externalId: 'TestView1',
 		version: '1',
 	},
 	{
 		space,
-		externalId: '__Stub',
+		externalId: 'TestView2',
 		version: '1',
 	},
 ];

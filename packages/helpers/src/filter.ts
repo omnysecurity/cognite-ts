@@ -11,7 +11,11 @@ import type {
 	ParameterizedPropertyValueV3,
 	PrefixFilterV3,
 } from '@cognite/sdk';
-import type { SchemaHelpers } from './helpers';
+import type {
+	ResolveViewKey,
+	SchemaHelpers,
+	UnambiguousViewReference,
+} from './helpers';
 
 export type NodeOrEdgeSchema = {
 	node: {
@@ -57,22 +61,33 @@ const createCoreHelpers = (): Pick<
  * BasicFilter supports built-in properties such as `["node", "externalId"]` and `["edge", "type"]`
  */
 export interface BasicFilter<TSchema> {
-	prefix<TView extends keyof TSchema>(
-		view: TView,
-		property: keyof TSchema[typeof view],
+	prefix<TRef extends UnambiguousViewReference<TSchema>>(
+		view: TRef,
+		property: keyof TSchema[ResolveViewKey<TSchema, TRef>],
 		value: string | ParameterizedPropertyValueV3
 	): PrefixFilterV3;
 
-	equals<TView extends keyof TSchema, TProp extends keyof TSchema[TView]>(
-		view: TView,
+	equals<
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
+	>(
+		view: TRef,
 		property: TProp,
-		value: TSchema[TView][TProp] | ParameterizedPropertyValueV3
+		value:
+			| TSchema[ResolveViewKey<TSchema, TRef>][TProp]
+			| ParameterizedPropertyValueV3
 	): EqualsFilterV3;
 
-	in<TView extends keyof TSchema, TProp extends keyof TSchema[TView]>(
-		view: TView,
+	in<
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
+	>(
+		view: TRef,
 		property: TProp,
-		values: (TSchema[TView][TProp] | ParameterizedPropertyValueV3)[]
+		values: (
+			| TSchema[ResolveViewKey<TSchema, TRef>][TProp]
+			| ParameterizedPropertyValueV3
+		)[]
 	): InFilterV3;
 }
 
@@ -89,31 +104,31 @@ export class Filter<TSchema> {
 	 * Filter built-in properties native to the instance, such as `node.externalId` or `edge.type`
 	 */
 	get instance(): BasicFilter<NodeOrEdgeSchema> {
-		return new Filter(this.#coreHelpers);
+		return new Filter(this.#coreHelpers) as BasicFilter<NodeOrEdgeSchema>;
 	}
 
-	public prefix<TView extends keyof TSchema>(
-		view: TView,
-		property: keyof TSchema[typeof view],
+	public prefix<TRef extends UnambiguousViewReference<TSchema>>(
+		view: TRef,
+		property: keyof TSchema[ResolveViewKey<TSchema, TRef>],
 		value: string | ParameterizedPropertyValueV3
 	): PrefixFilterV3 {
 		return {
 			prefix: {
-				property: this.helpers
-					.getView(view)
-					.asPropertyRef(property as keyof TSchema[typeof view]),
+				property: this.helpers.getView(view).asPropertyRef(property),
 				value,
 			},
 		};
 	}
 
 	public equals<
-		TView extends keyof TSchema,
-		TProp extends keyof TSchema[TView],
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
 	>(
-		view: TView,
+		view: TRef,
 		property: TProp,
-		value: TSchema[TView][TProp] | ParameterizedPropertyValueV3
+		value:
+			| TSchema[ResolveViewKey<TSchema, TRef>][TProp]
+			| ParameterizedPropertyValueV3
 	): EqualsFilterV3 {
 		return {
 			equals: {
@@ -124,9 +139,9 @@ export class Filter<TSchema> {
 	}
 
 	public exists<
-		TView extends keyof TSchema,
-		TProp extends keyof TSchema[TView],
-	>(view: TView, property: TProp): DMSExistsFilter {
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
+	>(view: TRef, property: TProp): DMSExistsFilter {
 		return {
 			exists: {
 				property: this.helpers.getView(view).asPropertyRef(property),
@@ -135,10 +150,10 @@ export class Filter<TSchema> {
 	}
 
 	public nested<
-		TView extends keyof TSchema,
-		TProp extends keyof TSchema[TView],
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
 	>(
-		view: TView,
+		view: TRef,
 		property: TProp,
 		filter: FilterDefinition
 	): DataModelsNestedFilter {
@@ -150,10 +165,16 @@ export class Filter<TSchema> {
 		};
 	}
 
-	public in<TView extends keyof TSchema, TProp extends keyof TSchema[TView]>(
-		view: TView,
+	public in<
+		TRef extends UnambiguousViewReference<TSchema>,
+		TProp extends keyof TSchema[ResolveViewKey<TSchema, TRef>],
+	>(
+		view: TRef,
 		property: TProp,
-		values: (TSchema[TView][TProp] | ParameterizedPropertyValueV3)[]
+		values: (
+			| TSchema[ResolveViewKey<TSchema, TRef>][TProp]
+			| ParameterizedPropertyValueV3
+		)[]
 	): InFilterV3 {
 		return {
 			in: {
@@ -164,8 +185,8 @@ export class Filter<TSchema> {
 	}
 
 	public hasData(
-		view: keyof TSchema,
-		...views: (keyof TSchema)[]
+		view: UnambiguousViewReference<TSchema>,
+		...views: UnambiguousViewReference<TSchema>[]
 	): HasExistingDataFilterV3 {
 		return {
 			hasData: [view, ...views].map((v) => this.helpers.getView(v).asRef()),
