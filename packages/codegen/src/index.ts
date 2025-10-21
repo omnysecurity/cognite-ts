@@ -7,6 +7,10 @@ import {
 import ts from 'typescript';
 import { type ExtendedViewCorePropertyDefinition } from './types.js';
 
+type ViewRef = { space: string; externalId: string; version: string };
+const getViewId = (view: ViewRef) =>
+	`${view.space}__${view.externalId}__${view.version}`;
+
 function resolveTypeNode(
 	propSpec: ExtendedViewCorePropertyDefinition
 ): ts.TypeNode {
@@ -37,7 +41,7 @@ function resolveTypeNode(
 			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
 		case 'direct':
 			return ts.factory.createTypeReferenceNode(
-				`DirectReference<${propSpec.type.source?.externalId ?? 'unknown'}>`
+				`DirectReference<${propSpec.type.source ? getViewId(propSpec.type.source) : 'unknown'}>`
 			);
 		case 'enum':
 			if (propSpec.type.values) {
@@ -145,7 +149,7 @@ function generateTypeForView(spec: ViewDefinition) {
 
 	const typeLiteral = ts.factory.createTypeLiteralNode(members);
 	const typeExtends = (spec.implements ?? []).map((view) =>
-		ts.factory.createTypeReferenceNode(view.externalId, undefined)
+		ts.factory.createTypeReferenceNode(getViewId(view), undefined)
 	);
 	const typeNode = ts.factory.createIntersectionTypeNode([
 		typeLiteral,
@@ -156,7 +160,7 @@ function generateTypeForView(spec: ViewDefinition) {
 		ts.factory.createJSDocComment(spec.description),
 		ts.factory.createTypeAliasDeclaration(
 			ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
-			ts.factory.createIdentifier(spec.externalId),
+			ts.factory.createIdentifier(getViewId(spec)),
 			undefined,
 			typeNode // ts.factory.createTypeLiteralNode(members.filter(Boolean))
 		),
@@ -169,12 +173,11 @@ function generateTypeForSchema(views: ViewDefinition[]) {
 	return createType(
 		'__Schema',
 		ts.factory.createTypeLiteralNode(
-			views.map((view) =>
-				createProperty(
-					view.externalId,
-					ts.factory.createTypeReferenceNode(view.externalId)
-				)
-			)
+			views.map((view) => {
+				const value = ts.factory.createTypeReferenceNode(getViewId(view));
+				const ref = getViewId(view);
+				return createProperty(ref, value);
+			})
 		)
 	);
 }
@@ -217,10 +220,8 @@ function createViewPropertyMap(views: ViewDefinition[]) {
 				ts.factory.createStringLiteral(propName)
 			)
 		);
-		return ts.factory.createPropertyAssignment(
-			view.externalId,
-			propertyNameLiterals
-		);
+		const ref = getViewId(view);
+		return ts.factory.createPropertyAssignment(ref, propertyNameLiterals);
 	});
 
 	const objectLiteral = ts.factory.createObjectLiteralExpression(
@@ -312,6 +313,59 @@ const _VIEW_DEFINITIONS = ${JSON.stringify(
 
 type _Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 type _Mutable<T> = _Expand<{ -readonly [K in keyof T]: _Mutable<T[K]> }>;
+
+type _ViewReferenceCandidate<TSchema> = keyof TSchema extends infer K
+	? K extends \`\${infer S}__\${infer E}__\${infer V}\` // full
+		? \`\${S}__\${E}__\${V}\` | \`\${S}__\${E}\` | E
+		: K extends \`\${infer S}__\${infer E}\` // versioned
+			? \`\${S}__\${E}\` | E
+			: K // simple
+	: never;
+type _CollectMatches<
+	TSchema,
+	TRef extends _ViewReferenceCandidate<TSchema>,
+> = keyof TSchema extends infer K
+	? K extends keyof TSchema
+		? K extends \`\${infer S}__\${infer E}__\${infer V}\`
+			? TRef extends \`\${S}__\${E}__\${V}\` | \`\${S}__\${E}\` | E
+				? TSchema[K]
+				: never
+			: K extends \`\${infer S}__\${infer E}\`
+				? TRef extends \`\${S}__\${E}\` | E
+					? TSchema[K]
+					: never
+				: TRef extends K
+					? TSchema[K]
+					: never
+		: never
+	: never;
+type _IsUnion<T, U = T> = T extends any
+	? [U] extends [T]
+		? false
+		: true
+	: false;
+type _IsSingleValue<T> = [T] extends [never]
+	? unknown
+	: _IsUnion<T> extends true
+		? unknown
+		: T;
+type ResolveView<
+	TSchema,
+	TRef extends _ViewReferenceCandidate<TSchema>,
+> = _IsSingleValue<_CollectMatches<TSchema, TRef>>;
+type _UnambiguousViewReference<TSchema> =
+	Extract<_ViewReferenceCandidate<TSchema>, string> extends infer TRef extends
+		string
+		? TRef extends _ViewReferenceCandidate<TSchema>
+			? unknown extends ResolveView<TSchema, TRef>
+				? never
+				: TRef
+			: never
+		: never;
+
+export type Schema = {
+	[K in _UnambiguousViewReference<__Schema>]: _Expand<ResolveView<__Schema, K>>;
+};
 export const VIEW_DEFINITIONS = _VIEW_DEFINITIONS as _Mutable<
 	typeof _VIEW_DEFINITIONS
 >;	
