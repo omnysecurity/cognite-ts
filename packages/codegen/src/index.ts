@@ -94,9 +94,6 @@ function generateTypesForBuiltInViews() {
 	const stringType = ts.factory.createKeywordTypeNode(
 		ts.SyntaxKind.StringKeyword
 	);
-	const numberType = ts.factory.createKeywordTypeNode(
-		ts.SyntaxKind.NumberKeyword
-	);
 
 	const directReference = createType(
 		'DirectReference',
@@ -110,37 +107,11 @@ function generateTypesForBuiltInViews() {
 		['T extends __Schema[keyof __Schema] | unknown = unknown']
 	);
 
-	const directReferenceType = ts.factory.createTypeReferenceNode(
-		'DirectReference',
-		undefined
-	);
-
-	const node = createType(
-		'Node',
-		ts.factory.createTypeLiteralNode([
-			createProperty('space', stringType),
-			createProperty('externalId', stringType),
-			createProperty('createdTime', numberType),
-			createProperty('lastUpdatedTime', numberType),
-		])
-	);
-
-	const edge = createType(
-		'Edge',
-		ts.factory.createTypeLiteralNode([
-			createProperty('space', stringType),
-			createProperty('externalId', stringType),
-			createProperty('type', directReferenceType),
-			createProperty('startNode', directReferenceType),
-			createProperty('endNode', directReferenceType),
-		])
-	);
-
 	// TODO: Add build-in types File, Sequence and Timeseries
-	return [node, edge, directReference];
+	return [directReference];
 }
 
-export function nullishFilter<T>(element: T | null | undefined): element is T {
+function nullishFilter<T>(element: T | null | undefined): element is T {
 	return element !== undefined && element !== null;
 }
 
