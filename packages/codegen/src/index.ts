@@ -204,7 +204,10 @@ export function generateTypescriptFile(
 	]);
 
 	// Generate TypeScript code from the AST
-	const printer = ts.createPrinter();
+	const printer = ts.createPrinter({
+		newLine: ts.NewLineKind.LineFeed,
+		removeComments: false,
+	});
 	const tsCode = printer.printList(
 		ts.ListFormat.MultiLine,
 		sourceNodes,
