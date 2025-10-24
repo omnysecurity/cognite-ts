@@ -1,3 +1,8 @@
+import type { DataModel, ViewDefinition } from '@cognite/sdk';
+import { describe, it, expect } from 'vitest';
+import { generate } from './';
+// import { writeFileSync } from 'fs';
+
 const VIEW_DEFINITIONS = [
 	{
 		externalId: 'Assessment',
@@ -500,10 +505,6 @@ const VIEW_DEFINITIONS = [
 	},
 ] as unknown as ViewDefinition[];
 
-import { describe, it, expect } from 'vitest';
-import { generate } from './';
-// import { writeFileSync } from 'fs';
-import type { DataModel, ViewDefinition } from '@cognite/sdk';
 describe('generate', () => {
 	it('generates code', () => {
 		const output = generate({
