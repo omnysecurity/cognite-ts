@@ -9,6 +9,7 @@ import type {
 } from '@cognite/sdk';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { __VIEWS, type TestView1, type __Schema } from './_mock';
+import { Filter } from './filter';
 import {
 	createHelpers,
 	type ResolveViewKey,
@@ -171,11 +172,10 @@ describe('SchemaHelpers', () => {
 
 	it('supports different reference styles', () => {
 		const viewDefinitions = TEST_VIEW_DEFINITIONS() as ViewDefinition[];
-
 		type T = {
-			Professor: ['name'];
-			sp_test__Student: ['name', 'age'];
-			sp_test__School__4: ['name'];
+			Professor: { name: string };
+			sp_test__Student: { name: string; age: number };
+			sp_test__School__4: { name: string };
 		};
 		const helpers = createHelpers<T>(viewDefinitions);
 
@@ -221,6 +221,87 @@ describe('SchemaHelpers', () => {
 		const def = helpers.getView(simple).asDefinition();
 		expect(def).toStrictEqual(helpers.getView(namespaced).asDefinition());
 		expect(def).toStrictEqual(helpers.getView(full).asDefinition());
+	});
+});
+
+it('supports dynamically registering views', () => {
+	const viewDefinitions = TEST_VIEW_DEFINITIONS() as ViewDefinition[];
+	const helpers = createHelpers(viewDefinitions);
+
+	const EXPECTED_NUMBER_OF_VIEWS = viewDefinitions.length;
+	expect(helpers.__views.length).toBe(EXPECTED_NUMBER_OF_VIEWS);
+
+	const createMockView = (space: string, externalId: string, version: string) =>
+		({
+			space,
+			externalId,
+			version,
+			properties: {},
+		}) as ViewDefinition;
+
+	const FOUX = createMockView('foux', 'foux', '0');
+	const FOUX_ID = helpers.getViewId(FOUX);
+	const FAFA = createMockView('foux', 'fafa', '0');
+	const FAFA_ID = helpers.getViewId(FAFA);
+
+	helpers.registerView(FOUX, FAFA);
+	expect(helpers.__views.length).toBe(EXPECTED_NUMBER_OF_VIEWS + 2);
+
+	expect(helpers.isKnownView(FOUX_ID)).toBe(true);
+	if (!helpers.isKnownView(FOUX_ID)) {
+		expect.fail('Expected view to be known');
+	}
+	expect(helpers.isKnownView(FOUX.externalId)).toBe(false);
+	expect(helpers.getView(FOUX_ID).asDefinition()).toStrictEqual(FOUX);
+
+	if (!helpers.isKnownView(FAFA_ID)) {
+		expect.fail('Expected view to be known');
+	}
+	expect(helpers.getView(FAFA_ID).asDefinition()).toStrictEqual(FAFA);
+});
+
+it('supports easy access to filter builder for registered views', () => {
+	const viewDefinitions = TEST_VIEW_DEFINITIONS() as ViewDefinition[];
+	type T = {
+		Professor: { name: string };
+		sp_test__Student: { name: string; age: number };
+		sp_test__School__4: { name: string };
+	};
+	const helpers = createHelpers<T>(viewDefinitions);
+
+	const expected = new Filter(helpers).equals(
+		'Professor',
+		'name',
+		'Dumbledore'
+	);
+	const actual = helpers.filter.equals('Professor', 'name', 'Dumbledore');
+	expect(expected).toStrictEqual(actual);
+
+	const createMockView = (space: string, externalId: string, version: string) =>
+		({
+			space,
+			externalId,
+			version,
+			properties: {},
+		}) as ViewDefinition;
+
+	const CUSTOM = createMockView('sample', 'custom', '0');
+	const CUSTOM_ID = helpers.getViewId(CUSTOM);
+
+	helpers.registerView(CUSTOM);
+	if (!helpers.isKnownView(CUSTOM_ID)) {
+		expect.fail('Expected view to be known');
+	}
+
+	expect(helpers.filter.hasData(CUSTOM_ID)).toStrictEqual({
+		hasData: [
+			{
+				space: 'sample',
+				externalId: 'custom',
+				version: '0',
+				type: 'view',
+			},
+		],
 	});
 });
 

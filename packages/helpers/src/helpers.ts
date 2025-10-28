@@ -12,6 +12,7 @@ import type {
 	ViewPropertyReference,
 	ViewReference,
 } from '@cognite/sdk';
+import { Filter } from './filter';
 
 // Extract all possible view reference candidates from schema (including ambiguous ones)
 type ViewReferenceCandidate<TSchema> = keyof TSchema extends infer K
@@ -104,39 +105,41 @@ export function createHelpers<TSchema>(
 		return `${view.space}__${view.externalId}__${view.version}`;
 	};
 
-	const viewRefByExternalId = views.reduce(
-		(acc, { externalId, space, version }) => {
-			const value = {
-				externalId,
-				space,
-				version,
-				type: 'view',
-			} satisfies ViewReference;
+	const asReference = (view: ViewDefinition) =>
+		({
+			externalId: view.externalId,
+			space: view.space,
+			version: view.version,
+			type: 'view',
+		}) satisfies ViewReference;
+
+	const knownViews = views.reduce(
+		(acc, viewDefinition) => {
+			const { space, externalId, version } = viewDefinition;
 			return {
 				...acc,
-				[externalId]: value, // simple
-				[`${space}__${externalId}`]: value, // versioned
-				[getViewId({ space, externalId, version })]: value, // full
+				[externalId]: viewDefinition,
+				[`${space}__${externalId}`]: viewDefinition,
+				[getViewId({ space, externalId, version })]: viewDefinition,
 			};
 		},
-		{} as Record<keyof TSchema, ViewReference>
+		{} as Record<keyof TSchema, ViewDefinition>
 	);
+
+	const registerView = (...viewDefinitions: ViewDefinition[]) =>
+		viewDefinitions.forEach((view) => {
+			knownViews[getViewId(view) as keyof TSchema] = view;
+		});
 
 	const getView = <TRef extends UnambiguousViewReference<TSchema>>(
 		viewRef: TRef
 	) => {
-		const view = viewRefByExternalId[viewRef as keyof TSchema];
+		const view = knownViews[viewRef as keyof TSchema];
 		type TView = ResolveViewKey<TSchema, TRef>;
 		return {
-			asDefinition: () =>
-				views.find(
-					(x) =>
-						x.space === view.space &&
-						x.externalId === view.externalId &&
-						x.version === view.version
-				)! as ViewDefinition,
+			asDefinition: () => view,
 			asId: () => getViewId(view) as unknown as TView,
-			asRef: (): ViewReference => view,
+			asRef: (): ViewReference => asReference(view),
 			asPropertyName: (property: keyof TSchema[TView]) => String(property),
 			asPropertyRef: (property: keyof TSchema[TView]) => [
 				view.space,
@@ -146,16 +149,16 @@ export function createHelpers<TSchema>(
 			asViewPropertyRef: (
 				property: keyof TSchema[TView]
 			): ViewPropertyReference => ({
-				view,
+				view: asReference(view),
 				identifier: property as string,
 			}),
 			asSource: (): SourceSelectorWithoutPropertiesV3[number] => ({
-				source: view,
+				source: asReference(view),
 			}),
 			asSourceSelector: <TProps extends keyof TSchema[TView]>(
 				properties: TProps[] | ['*']
 			): SourceSelectorV3[number] => ({
-				source: view as ViewReference,
+				source: asReference(view),
 				properties: properties as string[],
 			}),
 			getProps: (instance: NodeOrEdge) => {
@@ -187,7 +190,7 @@ export function createHelpers<TSchema>(
 	const isKnownView = (
 		name: string | number | symbol
 	): name is UnambiguousViewReference<TSchema> => {
-		return name in viewRefByExternalId;
+		return name in knownViews;
 	};
 
 	const isEdge = (nodeOrEdge: NodeOrEdge): nodeOrEdge is EdgeDefinition =>
@@ -274,7 +277,15 @@ export function createHelpers<TSchema>(
 		isNode,
 		isEdge,
 		isKnownView,
-		__views: views,
+		registerView,
+		get filter() {
+			return new Filter(this);
+		},
+		get __views() {
+			return Object.entries<ViewDefinition>(knownViews)
+				.filter(([key, value]) => getViewId(value) === key)
+				.map(([_, value]) => value);
+		},
 	};
 }
 
@@ -301,6 +312,8 @@ type EdgeWriteOptions<
 };
 
 export type SchemaHelpers<TSchema> = {
+	registerView: (...views: ViewDefinition[]) => void;
+	filter: Filter<TSchema>;
 	getView: <TRef extends UnambiguousViewReference<TSchema>>(
 		viewRef: TRef
 	) => ViewHelpers<TSchema, ResolveViewKey<TSchema, TRef>>;
