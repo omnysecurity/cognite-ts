@@ -1,5 +1,12 @@
 # @omnysecurity/cognite-helpers
 
+## 0.3.0
+
+### Minor Changes
+
+- f0d30a4: - Add property `helpers.registerView` - Helper can now be extended to additional views after initialization.
+  - Add property `helpers.filter` - Returns a `Filter` instance using the currently registered view definitions
+
 ## 0.2.0
 
 ### Minor Changes
