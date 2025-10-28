@@ -9,13 +9,13 @@ import type {
 } from '@cognite/sdk';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { __VIEWS, type TestView1, type __Schema } from './_mock';
+import { Filter } from './filter';
 import {
 	createHelpers,
 	type ResolveViewKey,
 	type ResolveView,
 	type UnambiguousViewReference,
 } from './helpers';
-import { Filter } from './filter';
 
 describe('SchemaHelpers', () => {
 	it('provides nice helpers for views in the schema', () => {
