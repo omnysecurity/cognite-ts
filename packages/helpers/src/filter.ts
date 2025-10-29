@@ -15,7 +15,7 @@ import type {
 	ResolveViewKey,
 	SchemaHelpers,
 	UnambiguousViewReference,
-} from './helpers';
+} from './helpers.js';
 
 export type NodeOrEdgeSchema = {
 	node: {

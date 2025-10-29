@@ -12,7 +12,7 @@ import type {
 	ViewPropertyReference,
 	ViewReference,
 } from '@cognite/sdk';
-import { Filter } from './filter';
+import { Filter } from './filter.js';
 
 // Extract all possible view reference candidates from schema (including ambiguous ones)
 type ViewReferenceCandidate<TSchema> = keyof TSchema extends infer K
