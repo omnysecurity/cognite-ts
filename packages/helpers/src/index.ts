@@ -1,11 +1,11 @@
-import { Filter } from './filter';
+import { Filter } from './filter.js';
 import {
 	createHelpers,
 	type SchemaHelpers,
 	type UnambiguousViewReference,
 	type ResolveView,
 	type ResolveViewKey,
-} from './helpers';
+} from './helpers.js';
 
 export {
 	createHelpers,
