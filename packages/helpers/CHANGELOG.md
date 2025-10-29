@@ -1,5 +1,13 @@
 # @omnysecurity/cognite-helpers
 
+## 0.3.1
+
+### Patch Changes
+
+- ea7d986: - Fixed ESM module resolution by adding `.js` extensions to relative imports in source files
+
+  This fixes `ERR_MODULE_NOT_FOUND` errors when using this package in ESM projects.
+
 ## 0.3.0
 
 ### Minor Changes
