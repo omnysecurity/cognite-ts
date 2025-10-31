@@ -1,7 +1,9 @@
 import { Filter } from './filter.js';
 import {
 	createHelpers,
+	getViewId,
 	type SchemaHelpers,
+	type ViewHelpers,
 	type UnambiguousViewReference,
 	type ResolveView,
 	type ResolveViewKey,
@@ -10,7 +12,9 @@ import {
 export {
 	createHelpers,
 	Filter,
+	getViewId,
 	type SchemaHelpers,
+	type ViewHelpers,
 	type UnambiguousViewReference,
 	type ResolveView,
 	type ResolveViewKey,

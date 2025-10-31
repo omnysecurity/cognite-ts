@@ -94,17 +94,17 @@ export type UnambiguousViewReference<TSchema> =
 			: never
 		: never;
 
+export const getViewId = (view: {
+	space: string;
+	externalId: string;
+	version: string;
+}) => {
+	return `${view.space}__${view.externalId}__${view.version}`;
+};
+
 export function createHelpers<TSchema>(
 	views: ViewDefinition[]
 ): SchemaHelpers<TSchema> {
-	const getViewId = (view: {
-		space: string;
-		externalId: string;
-		version: string;
-	}) => {
-		return `${view.space}__${view.externalId}__${view.version}`;
-	};
-
 	const asReference = (view: ViewDefinition) =>
 		({
 			externalId: view.externalId,
