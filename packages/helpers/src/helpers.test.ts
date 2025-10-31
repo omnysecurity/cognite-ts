@@ -13,6 +13,7 @@ import {
 	type TestView1,
 	type __Schema,
 } from './__fixtures__/minimal-schema';
+import { VIEW_DEFINITIONS } from './__fixtures__/view-definitions';
 import { Filter } from './filter';
 import {
 	createHelpers,
@@ -20,7 +21,6 @@ import {
 	type ResolveView,
 	type UnambiguousViewReference,
 } from './helpers';
-import { VIEW_DEFINITIONS } from './__fixtures__/view-definitions';
 
 describe('SchemaHelpers', () => {
 	it('provides nice helpers for views in the schema', () => {
