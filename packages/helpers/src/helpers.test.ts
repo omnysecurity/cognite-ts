@@ -8,7 +8,7 @@ import type {
 	ViewReference,
 } from '@cognite/sdk';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { __VIEWS, type TestView1, type __Schema } from './_mock';
+import { __VIEWS, type TestView1, type __Schema } from './__fixtures__/sample';
 import { Filter } from './filter';
 import {
 	createHelpers,
