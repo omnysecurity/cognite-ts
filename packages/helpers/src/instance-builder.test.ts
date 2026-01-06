@@ -78,10 +78,10 @@ describe('InstanceBuilder', () => {
 			builder.node(nodeRef).view('sp_test__Student__999');
 		});
 
-		it('supports creating new nodes with auto-generated externalId', () => {
-			const node = builder.node({ space: 'sp_test', generateId: true });
+		it('supports creating new nodes with auto-generated externalId when externalId is omitted', () => {
+			const node = builder.node({ space: 'sp_test' });
 
-			// The ref should have space and a generated externalId
+			// The ref should have space and a generated externalId (UUID)
 			expect(node.ref.space).toBe('sp_test');
 			expect(node.ref.externalId).toMatch(
 				/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -94,9 +94,9 @@ describe('InstanceBuilder', () => {
 			expect(writes[0]!.externalId).toBe(node.ref.externalId);
 		});
 
-		it('generates unique externalIds for each new node', () => {
-			const node1 = builder.node({ space: 'sp_test', generateId: true });
-			const node2 = builder.node({ space: 'sp_test', generateId: true });
+		it('generates unique externalIds for each new node when externalId is omitted', () => {
+			const node1 = builder.node({ space: 'sp_test' });
+			const node2 = builder.node({ space: 'sp_test' });
 
 			expect(node1.ref.externalId).not.toBe(node2.ref.externalId);
 		});
@@ -713,10 +713,9 @@ describe('InstanceBuilder', () => {
 			expect(writes).toHaveLength(0);
 		});
 
-		it('includes type with auto-generated externalId', () => {
+		it('includes type with auto-generated externalId when externalId is omitted', () => {
 			const node = builder.node({
 				space: 'sp_test',
-				generateId: true,
 				type: { space: 'sp_test', externalId: 'StudentType' },
 			});
 

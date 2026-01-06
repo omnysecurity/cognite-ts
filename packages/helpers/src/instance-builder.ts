@@ -765,25 +765,13 @@ class NodeSelector<TViews> implements WriteResult {
 }
 
 /**
- * Base node options with optional type
+ * Node options - externalId is optional; when omitted, a UUID will be auto-generated
  */
 interface NodeOptions {
 	/** The space where the node exists */
 	space: string;
-	/** The externalId of the node */
-	externalId: string;
-	/** Optional node type (DirectRelationReference) */
-	type?: DirectRelationReference;
-}
-
-/**
- * Options for a node with auto-generated externalId
- */
-interface GenerateIdNodeOptions {
-	/** The space where the node will be created */
-	space: string;
-	/** Set to true to auto-generate an externalId (UUID v4) */
-	generateId: true;
+	/** The externalId of the node. If omitted, a UUID v4 will be auto-generated. */
+	externalId?: string;
 	/** Optional node type (DirectRelationReference) */
 	type?: DirectRelationReference;
 }
@@ -835,24 +823,14 @@ class InstanceBuilder<TViews> {
 
 	/**
 	 * Select a node to work with
-	 * @param options - Node options with space, externalId, and optional type
+	 * @param options - Node options with space, optional externalId, and optional type
 	 */
-	node(options: NodeOptions): NodeSelector<TViews>;
-	node(options: GenerateIdNodeOptions): NodeSelector<TViews>;
-	node(options: NodeOptions | GenerateIdNodeOptions): NodeSelector<TViews> {
-		if ('generateId' in options && options.generateId) {
-			const nodeRef: DirectRelationReference = {
-				space: options.space,
-				externalId: generateUUID(),
-			};
-			return new NodeSelector(this.views, nodeRef, options.type);
-		}
-		const nodeOptions = options as NodeOptions;
+	node(options: NodeOptions): NodeSelector<TViews> {
 		const nodeRef: DirectRelationReference = {
-			space: nodeOptions.space,
-			externalId: nodeOptions.externalId,
+			space: options.space,
+			externalId: options.externalId ?? generateUUID(),
 		};
-		return new NodeSelector(this.views, nodeRef, nodeOptions.type);
+		return new NodeSelector(this.views, nodeRef, options.type);
 	}
 }
 
