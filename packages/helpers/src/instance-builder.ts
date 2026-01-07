@@ -12,6 +12,9 @@ import type {
 	ViewDefinition,
 } from '@cognite/sdk';
 
+// -- Internal State Symbol --
+const $ = Symbol('internal');
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -433,29 +436,40 @@ class InstanceBuilder<TViews extends readonly BuilderView[]> {
 	}
 }
 
-class NodeInstanceBuilder<TViews extends readonly BuilderView[]> {
-	protected _peers: Record<string, NodeInstanceBuilder<TViews>> = {};
-	protected _edges: Record<string, EdgeInstanceBuilder<TViews>> = {};
-	protected _touch: boolean = false;
+type NodeInstanceState<TViews extends readonly BuilderView[]> = {
+	views: TViews;
+	node: BuilderNode;
+	peers: Record<string, NodeInstanceBuilder<TViews>>;
+	edges: Record<string, EdgeInstanceBuilder<TViews>>;
+	touched: boolean;
+};
 
-	constructor(
-		protected _views: TViews,
-		protected _instance: BuilderNode
-	) {}
+class NodeInstanceBuilder<TViews extends readonly BuilderView[]> {
+	[$]: NodeInstanceState<TViews>;
+
+	constructor(views: TViews, node: BuilderNode) {
+		this[$] = {
+			views,
+			node,
+			peers: {},
+			edges: {},
+			touched: false,
+		};
+	}
 
 	get ref(): DirectRelationReference {
 		return {
-			space: this._instance.space,
-			externalId: this._instance.externalId,
+			space: this[$].node.space,
+			externalId: this[$].node.externalId,
 		};
 	}
 
 	get instance(): BuilderNode {
-		return this._instance;
+		return this[$].node;
 	}
 
 	touch(): this {
-		this._touch = true;
+		this[$].touched = true;
 		return this;
 	}
 
@@ -485,43 +499,43 @@ class NodeInstanceBuilder<TViews extends readonly BuilderView[]> {
 		if (this.instance.version >= 0)
 			instanceWrite.existingVersion = this.instance.version;
 		return [
-			...(this._touch ? [instanceWrite] : []),
-			...Object.values(this._peers).flatMap((x) => x.asWrite()),
-			...Object.values(this._edges).flatMap((x) => x.asWrite()),
+			...(this[$].touched ? [instanceWrite] : []),
+			...Object.values(this[$].peers).flatMap((x) => x.asWrite()),
+			...Object.values(this[$].edges).flatMap((x) => x.asWrite()),
 		];
 	}
 
 	view<TRef extends UnambiguousViewReference<TViews>>(
 		viewRef: TRef
 	): NodeViewBuilder<TViews, ViewByRef<TViews, TRef>> {
-		const view = findViewByRef(this._views, viewRef);
+		const view = findViewByRef(this[$].views, viewRef);
 		if (!view) throw new Error(`Unknown view: '${viewRef}'`);
 
-		const viewBuilder = new NodeViewBuilder(
-			this._views,
-			this._instance,
-			view as ViewByRef<TViews, TRef>
-		);
-		if (this._touch) viewBuilder.touch();
-		return viewBuilder;
+		return new NodeViewBuilder(this, view as ViewByRef<TViews, TRef>);
 	}
 }
 
+type EdgeInstanceState<TViews extends readonly BuilderView[]> = {
+	views: TViews;
+	edge: BuilderEdge;
+};
+
 class EdgeInstanceBuilder<TViews extends readonly BuilderView[]> {
-	constructor(
-		protected _views: TViews,
-		protected _instance: BuilderEdge
-	) {}
+	[$]: EdgeInstanceState<TViews>;
+
+	constructor(views: TViews, edge: BuilderEdge) {
+		this[$] = { views, edge };
+	}
 
 	get ref(): DirectRelationReference {
 		return {
-			space: this._instance.space,
-			externalId: this._instance.externalId,
+			space: this[$].edge.space,
+			externalId: this[$].edge.externalId,
 		};
 	}
 
 	get instance(): BuilderEdge {
-		return this._instance;
+		return this[$].edge;
 	}
 
 	asWrite(): NodeOrEdgeCreate {
@@ -557,31 +571,50 @@ class EdgeInstanceBuilder<TViews extends readonly BuilderView[]> {
 	view<TRef extends UnambiguousViewReference<TViews>>(
 		viewRef: TRef
 	): EdgeViewBuilder<TViews, ViewByRef<TViews, TRef>> {
-		const view = findViewByRef(this._views, viewRef);
+		const view = findViewByRef(this[$].views, viewRef);
 		if (!view) throw new Error(`Unknown view: '${viewRef}'`);
 
-		return new EdgeViewBuilder(
-			this._views,
-			this._instance,
-			view as ViewByRef<TViews, TRef>
-		);
+		return new EdgeViewBuilder(this, view as ViewByRef<TViews, TRef>);
 	}
 }
 
 class EdgeViewBuilder<
 	TViews extends readonly BuilderView[],
 	TView extends BuilderView,
-> extends EdgeInstanceBuilder<TViews> {
-	constructor(
-		_views: TViews,
-		_instance: BuilderEdge,
-		protected _view: TView
-	) {
-		super(_views, _instance);
+> {
+	[$]: { parent: EdgeInstanceBuilder<TViews>; view: TView };
+
+	constructor(parent: EdgeInstanceBuilder<TViews>, view: TView) {
+		this[$] = { parent, view };
+	}
+
+	private get _parent() {
+		return this[$].parent;
+	}
+	private get _view() {
+		return this[$].view;
+	}
+
+	get ref(): DirectRelationReference {
+		return this._parent.ref;
+	}
+
+	get instance(): BuilderEdge {
+		return this._parent.instance;
+	}
+
+	asWrite(): NodeOrEdgeCreate {
+		return this._parent.asWrite();
+	}
+
+	view<TRef extends UnambiguousViewReference<TViews>>(
+		viewRef: TRef
+	): EdgeViewBuilder<TViews, ViewByRef<TViews, TRef>> {
+		return this._parent.view(viewRef);
 	}
 
 	update(properties: UpdateProperties<TView['properties']>): this {
-		let acc = this._instance.properties ?? {};
+		let acc = this.instance.properties ?? {};
 		acc[this._view.space] = {
 			...acc[this._view.space],
 			[`${this._view.externalId}/${this._view.version}`]: {
@@ -591,17 +624,17 @@ class EdgeViewBuilder<
 				...properties,
 			},
 		};
-		this._instance.properties = acc;
+		this.instance.properties = acc;
 		return this;
 	}
 
 	upsert(properties: UpsertProperties<TView['properties']>): this {
-		let acc = this._instance.properties ?? {};
+		let acc = this.instance.properties ?? {};
 		acc[this._view.space] = {
 			...acc[this._view.space],
 			[`${this._view.externalId}/${this._view.version}`]: properties,
 		};
-		this._instance.properties = acc;
+		this.instance.properties = acc;
 		return this;
 	}
 }
@@ -609,18 +642,55 @@ class EdgeViewBuilder<
 class NodeViewBuilder<
 	TViews extends readonly BuilderView[],
 	TView extends BuilderView,
-> extends NodeInstanceBuilder<TViews> {
-	constructor(
-		_views: TViews,
-		_instance: BuilderNode,
-		protected _view: TView
-	) {
-		super(_views, _instance);
+> {
+	[$]: { parent: NodeInstanceBuilder<TViews>; view: TView };
+
+	constructor(parent: NodeInstanceBuilder<TViews>, view: TView) {
+		this[$] = { parent, view };
+	}
+
+	private get _parent() {
+		return this[$].parent;
+	}
+	private get _view() {
+		return this[$].view;
+	}
+	private get _views() {
+		return this[$].parent[$].views;
+	}
+	private get _peers() {
+		return this[$].parent[$].peers;
+	}
+	private get _edges() {
+		return this[$].parent[$].edges;
+	}
+
+	get ref(): DirectRelationReference {
+		return this._parent.ref;
+	}
+
+	get instance(): BuilderNode {
+		return this._parent.instance;
+	}
+
+	touch(): this {
+		this._parent.touch();
+		return this;
+	}
+
+	asWrite(): NodeOrEdgeCreate[] {
+		return this._parent.asWrite();
+	}
+
+	view<TRef extends UnambiguousViewReference<TViews>>(
+		viewRef: TRef
+	): NodeViewBuilder<TViews, ViewByRef<TViews, TRef>> {
+		return this._parent.view(viewRef);
 	}
 
 	update(properties: UpdateProperties<TView['properties']>): this {
-		this._touch = true;
-		let acc = this._instance.properties ?? {};
+		this.touch();
+		let acc = this.instance.properties ?? {};
 		acc[this._view.space] = {
 			...acc[this._view.space],
 			[`${this._view.externalId}/${this._view.version}`]: {
@@ -630,18 +700,18 @@ class NodeViewBuilder<
 				...properties,
 			},
 		};
-		this._instance.properties = acc;
+		this.instance.properties = acc;
 		return this;
 	}
 
 	upsert(properties: UpsertProperties<TView['properties']>): this {
-		this._touch = true;
-		let acc = this._instance.properties ?? {};
+		this.touch();
+		let acc = this.instance.properties ?? {};
 		acc[this._view.space] = {
 			...acc[this._view.space],
 			[`${this._view.externalId}/${this._view.version}`]: properties,
 		};
-		this._instance.properties = acc;
+		this.instance.properties = acc;
 		return this;
 	}
 
@@ -670,7 +740,8 @@ class NodeViewBuilder<
 						ref
 					);
 
-				this._peers[id] = peer.view(viewId).update({
+				this._peers[id] = peer;
+				peer.view(viewId).update({
 					[propertyName]: this.ref,
 				} as UpdateProperties<unknown>);
 				return this;
