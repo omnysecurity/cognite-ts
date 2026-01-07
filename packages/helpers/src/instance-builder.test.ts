@@ -69,13 +69,19 @@ describe('InstanceBuilder', () => {
 			builder.node(nodeRef).view('sp_test__School__4');
 
 			// @ts-expect-error - InvalidView is not a valid view
-			builder.node(nodeRef).view('InvalidView');
+			expect(() => builder.node(nodeRef).view('InvalidView')).toThrow(
+				"Unknown view: 'InvalidView'"
+			);
 
 			// @ts-expect-error - wrong space
-			builder.node(nodeRef).view('wrong_space__Student');
+			expect(() => builder.node(nodeRef).view('wrong_space__Student')).toThrow(
+				"Unknown view: 'wrong_space__Student'"
+			);
 
 			// @ts-expect-error - wrong version
-			builder.node(nodeRef).view('sp_test__Student__999');
+			expect(() => builder.node(nodeRef).view('sp_test__Student__999')).toThrow(
+				"Unknown view: 'sp_test__Student__999'"
+			);
 		});
 
 		it('supports creating new nodes with auto-generated externalId when externalId is omitted', () => {
@@ -205,10 +211,14 @@ describe('InstanceBuilder', () => {
 			student.connect('subjects');
 
 			// @ts-expect-error - name is a direct property, not an edge connection
-			student.connect('name');
+			expect(() => student.connect('name')).toThrow(
+				"Invalid edge property key: 'name'"
+			);
 
 			// @ts-expect-error - school is a direct relation, not an edge connection
-			student.connect('school');
+			expect(() => student.connect('school')).toThrow(
+				"Invalid edge property key: 'school'"
+			);
 		});
 
 		it('provides withProperties for edges with edgeSource', () => {
@@ -265,20 +275,20 @@ describe('InstanceBuilder', () => {
 		});
 	});
 
-	describe('NodeBuilder.addReverse', () => {
+	describe('NodeBuilder.reference', () => {
 		it('provides autocomplete for reverse connections only', () => {
 			const school = builder
 				.node({ space: 'sp_test', externalId: 'school-1' })
 				.view('School');
 
 			// Reverse connections should be available
-			school.addReverse('students');
+			school.reference('students');
 
 			// @ts-expect-error - name is a direct property, not a reverse connection
-			school.addReverse('name');
+			school.reference('name');
 
 			// @ts-expect-error - description is a direct property
-			school.addReverse('description');
+			school.reference('description');
 		});
 
 		it('provides from() method to specify source node', () => {
@@ -288,7 +298,7 @@ describe('InstanceBuilder', () => {
 
 			// This will update student-2's school property to point to school-1
 			school
-				.addReverse('students')
+				.reference('students')
 				.from({ space: 'sp_test', externalId: 'student-2' });
 		});
 	});
@@ -381,13 +391,13 @@ describe('InstanceBuilder', () => {
 			expect(result.asWrite()[0]!.instanceType).toBe('edge');
 		});
 
-		it('returns WriteResult with asWrite() from addReverse().from()', () => {
+		it('returns WriteResult with asWrite() from reference().from()', () => {
 			const school = builder
 				.node({ space: 'sp_test', externalId: 'school-1' })
 				.view('School');
 
 			const result = school
-				.addReverse('students')
+				.reference('students')
 				.from({ space: 'sp_test', externalId: 'student-2' });
 
 			expect(result.asWrite()).toHaveLength(1);
@@ -553,16 +563,16 @@ describe('InstanceBuilder', () => {
 			});
 		});
 
-		it('produces correct NodeWrite from addReverse().from()', () => {
+		it('produces correct NodeWrite from reference().from()', () => {
 			const writes = builder
 				.node({ space: 'sp_test', externalId: 'school-1' })
 				.view('School')
-				.addReverse('students')
+				.reference('students')
 				.from({ space: 'sp_test', externalId: 'student-2' })
 				.asWrite();
 
 			expect(writes).toHaveLength(1);
-			// addReverse updates the SOURCE node (student-2), not the target (school-1)
+			// reference updates the SOURCE node (student-2), not the target (school-1)
 			expect(writes[0]).toMatchObject({
 				instanceType: 'node',
 				space: 'sp_test',
@@ -570,9 +580,10 @@ describe('InstanceBuilder', () => {
 				sources: [
 					{
 						source: {
-							type: 'container',
+							type: 'view',
 							space: 'sp_test',
 							externalId: 'Student',
+							version: '1',
 						},
 						properties: {
 							school: { space: 'sp_test', externalId: 'school-1' },
@@ -637,6 +648,7 @@ describe('InstanceBuilder', () => {
 				.view('Student')
 				.connect('subjects')
 				.to({ space: 'sp_test', externalId: 'math-101' })
+				.withoutProperties()
 				.asWrite();
 
 			// Subject.students has direction: 'inwards' - subject is endNode
@@ -645,6 +657,7 @@ describe('InstanceBuilder', () => {
 				.view('Subject')
 				.connect('students')
 				.to({ space: 'sp_test', externalId: 'student-1' })
+				.withoutProperties()
 				.asWrite();
 
 			// Both should produce identical edges
@@ -694,6 +707,7 @@ describe('InstanceBuilder', () => {
 					externalId: 'student-1',
 					type: { space: 'sp_test', externalId: 'StudentType' },
 				})
+				.touch()
 				.asWrite();
 
 			expect(writes).toHaveLength(1);
@@ -702,6 +716,7 @@ describe('InstanceBuilder', () => {
 				space: 'sp_test',
 				externalId: 'student-1',
 				type: { space: 'sp_test', externalId: 'StudentType' },
+				sources: [],
 			});
 		});
 
@@ -714,10 +729,12 @@ describe('InstanceBuilder', () => {
 		});
 
 		it('includes type with auto-generated externalId when externalId is omitted', () => {
-			const node = builder.node({
-				space: 'sp_test',
-				type: { space: 'sp_test', externalId: 'StudentType' },
-			});
+			const node = builder
+				.node({
+					space: 'sp_test',
+					type: { space: 'sp_test', externalId: 'StudentType' },
+				})
+				.touch();
 
 			const writes = node.asWrite();
 
@@ -733,13 +750,14 @@ describe('InstanceBuilder', () => {
 			);
 		});
 
-		it('produces NodeWrite with only type (no sources) when no properties set', () => {
+		it('allows touching node using .touch() without assigning view properties', () => {
 			const writes = builder
 				.node({
 					space: 'sp_test',
 					externalId: 'student-1',
 					type: { space: 'sp_test', externalId: 'StudentType' },
 				})
+				.touch()
 				.view('Student')
 				.asWrite();
 
@@ -749,9 +767,8 @@ describe('InstanceBuilder', () => {
 				space: 'sp_test',
 				externalId: 'student-1',
 				type: { space: 'sp_test', externalId: 'StudentType' },
+				sources: [],
 			});
-			// Should NOT have sources property when no properties are set
-			expect(writes[0]).not.toHaveProperty('sources');
 		});
 	});
 
