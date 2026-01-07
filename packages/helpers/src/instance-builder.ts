@@ -9,6 +9,7 @@ import type {
 	ReverseDirectRelationConnection,
 	ViewDefinitionProperty,
 	EdgeDefinition,
+	ViewDefinition,
 } from '@cognite/sdk';
 
 // =============================================================================
@@ -246,6 +247,58 @@ type EdgeConnectionBuilderWithProperties<
 // =============================================================================
 // Utility Functions
 // =============================================================================
+
+function getViewId(view: {
+	space: string;
+	externalId: string;
+	version: string;
+}) {
+	return `${view.space}__${view.externalId}__${view.version}`;
+}
+
+function getId(ref: { space: string; externalId: string }) {
+	return `${ref.space}__${ref.externalId}`;
+}
+
+/**
+ * Resolve the view property name for a reverse direct relation connection.
+ *
+ * When through.source.type is "container", the through.identifier references a container
+ * property, not a view property. View properties can be aliases of container properties,
+ * so we need to find the view property that maps to the container property.
+ */
+function resolveReverseRelationPropertyName(
+	connection: ReverseDirectRelationConnection,
+	views: readonly BuilderView[]
+): string {
+	const { through, source } = connection;
+
+	// If the through source is a view, the identifier is already the view property name
+	if (through.source.type === 'view') {
+		return through.identifier;
+	}
+
+	// For container sources, find the view property that maps to this container property
+	const viewId = getViewId(source);
+	const view = views.find((v) => getViewId(v) === viewId) as
+		| ViewDefinition
+		| undefined;
+
+	if (!view) {
+		// Fall back to the container property identifier if view not found
+		return through.identifier;
+	}
+
+	const containerId = getId(through.source);
+	const viewPropertyName = Object.entries(view.properties).find(
+		([, prop]) =>
+			'container' in prop &&
+			getId(prop.container) === containerId &&
+			prop.containerPropertyIdentifier === through.identifier
+	)?.[0];
+
+	return viewPropertyName ?? through.identifier;
+}
 
 /**
  * FNV-1a 64-bit hash for generating deterministic edge IDs.
@@ -589,22 +642,24 @@ class NodeViewBuilder<
 		] as ReverseDirectRelationConnection;
 		return {
 			from: (ref: DirectRelationReference) => {
-				const id = `${ref.space}__${ref.externalId}`;
-				const viewId =
-					`${def.source.space}__${def.source.externalId}__${def.source.version}` as UnambiguousViewReference<TViews>;
-				// TODO: Resolve the property in the view that has def.through.identifier as it's containerPropertyIdentifier
-				this._peers[id] = (
+				const id = getId(ref);
+				const viewId = getViewId(
+					def.source
+				) as UnambiguousViewReference<TViews>;
+				const propertyName = resolveReverseRelationPropertyName(
+					def,
+					this._views
+				);
+
+				const peer =
 					this._peers[id] ??
 					(createInstanceBuilder(this._views) as InstanceBuilder<TViews>).node(
 						ref
-					)
-				)
-					.view(viewId)
-					.update({
-						// TODO: The property may have a different name in the view (!)
-						// TODO: What about other required properties in the view/container?
-						[def.through.identifier]: this.ref,
-					} as UpdateProperties<unknown>);
+					);
+
+				this._peers[id] = peer.view(viewId).update({
+					[propertyName]: this.ref,
+				} as UpdateProperties<unknown>);
 				return this;
 			},
 		};
@@ -652,9 +707,10 @@ class NodeViewBuilder<
 						options?: BuilderEdgeOptions
 					) => {
 						const builder = getEdgeBuilder(other, options);
-						const id = `${builder.ref.space}__${builder.ref.externalId}`;
-						const viewId =
-							`${def.edgeSource!.space}__${def.edgeSource!.externalId}__${def.edgeSource!.version}` as UnambiguousViewReference<TViews>;
+						const id = getId(builder.ref);
+						const viewId = getViewId(
+							def.edgeSource!
+						) as UnambiguousViewReference<TViews>;
 						this._edges[id] = this._edges[id] ?? builder;
 
 						return {
@@ -676,7 +732,7 @@ class NodeViewBuilder<
 						options?: BuilderEdgeOptions
 					) => {
 						const builder = getEdgeBuilder(other, options);
-						const id = `${builder.ref.space}__${builder.ref.externalId}`;
+						const id = getId(builder.ref);
 						this._edges[id] = this._edges[id] ?? builder;
 						return this;
 					},

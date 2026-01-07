@@ -498,6 +498,135 @@ export const TEST_VIEW_DEFINITIONS = [
 			"A Subject is a defined area of study within a school's curriculum that is taught by a professor.",
 		implements: [],
 	},
+	// Test view with an aliased property name (view property name differs from container property identifier)
+	{
+		externalId: 'Course',
+		space: 'sp_test',
+		version: '1',
+		createdTime: 1755860256522,
+		lastUpdatedTime: 1758179427358,
+		writable: true,
+		queryable: true,
+		usedFor: 'node',
+		isGlobal: false,
+		properties: {
+			name: {
+				constraintState: {},
+				type: {
+					type: 'text',
+					list: false,
+					collation: 'ucs_basic',
+				},
+				container: {
+					type: 'container',
+					space: 'sp_test',
+					externalId: 'Course',
+				},
+				containerPropertyIdentifier: 'name',
+				immutable: false,
+				nullable: true,
+				autoIncrement: false,
+				name: 'Course.name',
+			},
+			// This property has a different name in the view ("department") than in the container ("dept_ref")
+			department: {
+				constraintState: {},
+				type: {
+					type: 'direct',
+					list: false,
+					source: {
+						type: 'view',
+						space: 'sp_test',
+						externalId: 'Department',
+						version: '1',
+					},
+				},
+				container: {
+					type: 'container',
+					space: 'sp_test',
+					externalId: 'Course',
+				},
+				// Note: containerPropertyIdentifier differs from the view property name "department"
+				containerPropertyIdentifier: 'dept_ref',
+				immutable: false,
+				nullable: true,
+				autoIncrement: false,
+				name: 'Course.department',
+			},
+		},
+		mappedContainers: [
+			{
+				type: 'container',
+				space: 'sp_test',
+				externalId: 'Course',
+			},
+		],
+		name: 'Course',
+		description: 'A Course belongs to a Department.',
+		implements: [],
+	},
+	{
+		externalId: 'Department',
+		space: 'sp_test',
+		version: '1',
+		createdTime: 1755860256522,
+		lastUpdatedTime: 1758179427358,
+		writable: true,
+		queryable: true,
+		usedFor: 'node',
+		isGlobal: false,
+		properties: {
+			name: {
+				constraintState: {},
+				type: {
+					type: 'text',
+					list: false,
+					collation: 'ucs_basic',
+				},
+				container: {
+					type: 'container',
+					space: 'sp_test',
+					externalId: 'Department',
+				},
+				containerPropertyIdentifier: 'name',
+				immutable: false,
+				nullable: true,
+				autoIncrement: false,
+				name: 'Department.name',
+			},
+			// Reverse relation that references the Course.department property via the container property identifier
+			courses: {
+				connectionType: 'multi_reverse_direct_relation',
+				source: {
+					type: 'view',
+					space: 'sp_test',
+					externalId: 'Course',
+					version: '1',
+				},
+				through: {
+					source: {
+						type: 'container',
+						space: 'sp_test',
+						externalId: 'Course',
+					},
+					// This references the container property identifier, NOT the view property name
+					identifier: 'dept_ref',
+				},
+				targetsList: false,
+				name: 'Department.courses',
+			},
+		},
+		mappedContainers: [
+			{
+				type: 'container',
+				space: 'sp_test',
+				externalId: 'Department',
+			},
+		],
+		name: 'Department',
+		description: 'A Department contains Courses.',
+		implements: [],
+	},
 ] as const;
 
 // Export the precise literal type for type-level testing

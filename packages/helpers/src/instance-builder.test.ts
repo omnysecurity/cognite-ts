@@ -612,6 +612,43 @@ describe('InstanceBuilder', () => {
 			});
 		});
 
+		it('resolves aliased property names in reference().from() when container property differs from view property', () => {
+			// Department.courses is a reverse relation that references Course.department
+			// The Course view has a property "department" that maps to container property "dept_ref"
+			// The reverse relation's through.identifier is "dept_ref" (the container property)
+			// The builder should resolve this to the view property name "department"
+			const writes = builder
+				.node({ space: 'sp_test', externalId: 'dept-1' })
+				.view('Department')
+				.reference('courses')
+				.from({ space: 'sp_test', externalId: 'course-1' })
+				.asWrite();
+
+			expect(writes).toHaveLength(1);
+			// The Course node should be updated with the "department" property (view name),
+			// NOT "dept_ref" (container property identifier)
+			expect(writes[0]).toMatchObject({
+				instanceType: 'node',
+				space: 'sp_test',
+				externalId: 'course-1',
+				sources: [
+					{
+						source: {
+							type: 'view',
+							space: 'sp_test',
+							externalId: 'Course',
+							version: '1',
+						},
+						properties: {
+							// This should be "department" (the view property name),
+							// not "dept_ref" (the container property identifier)
+							department: { space: 'sp_test', externalId: 'dept-1' },
+						},
+					},
+				],
+			});
+		});
+
 		it('generates deterministic edge externalIds', () => {
 			// Same start/end nodes should produce same edge externalId
 			const writes1 = builder
