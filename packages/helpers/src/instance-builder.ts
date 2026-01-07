@@ -301,21 +301,33 @@ function resolveReverseRelationPropertyName(
 }
 
 /**
- * FNV-1a 64-bit hash for generating deterministic edge IDs.
+ * FNV-1a hash with 128-bit output for better collision resistance.
+ * Uses two different FNV offset bases to produce independent 64-bit hashes.
  */
-function hashString(str: string): string {
+function hash128(str: string): string {
 	const FNV_PRIME = BigInt('0x100000001b3');
-	const FNV_OFFSET = BigInt('0xcbf29ce484222325');
+	const FNV_OFFSET_1 = BigInt('0xcbf29ce484222325');
+	const FNV_OFFSET_2 = BigInt('0x84222325cbf29ce4');
 
-	let hash = FNV_OFFSET;
+	let hash1 = FNV_OFFSET_1;
+	let hash2 = FNV_OFFSET_2;
+	const mask = BigInt('0xffffffffffffffff');
+
 	for (let i = 0; i < str.length; i++) {
-		hash ^= BigInt(str.charCodeAt(i));
-		hash = (hash * FNV_PRIME) & BigInt('0xffffffffffffffff');
+		const char = BigInt(str.charCodeAt(i));
+		hash1 = ((hash1 ^ char) * FNV_PRIME) & mask;
+		hash2 = ((hash2 ^ char) * FNV_PRIME) & mask;
 	}
 
-	return hash.toString(16).padStart(16, '0');
+	return (
+		hash1.toString(16).padStart(16, '0') + hash2.toString(16).padStart(16, '0')
+	);
 }
 
+/**
+ * Generate a deterministic edge externalId.
+ * Uses 128-bit FNV-1a hash for good collision resistance.
+ */
 function generateEdgeExternalId(
 	startNode: DirectRelationReference,
 	endNode: DirectRelationReference,
@@ -329,7 +341,8 @@ function generateEdgeExternalId(
 		endNode.space,
 		endNode.externalId,
 	].join(':');
-	return hashString(input);
+
+	return hash128(input);
 }
 
 function generateUUID(): string {

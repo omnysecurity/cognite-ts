@@ -526,8 +526,8 @@ describe('InstanceBuilder', () => {
 				startNode: { space: 'sp_test', externalId: 'prof-1' },
 				endNode: { space: 'sp_test', externalId: 'prof-2' },
 			});
-			// Edge should have a deterministic externalId (hash)
-			expect(writes[0]!.externalId).toMatch(/^[0-9a-f]{16}$/);
+			// Edge should have a deterministic externalId (128-bit hash)
+			expect(writes[0]!.externalId).toMatch(/^[0-9a-f]{32}$/);
 		});
 
 		it('produces correct EdgeWrite with properties from connect().to().withProperties()', () => {
