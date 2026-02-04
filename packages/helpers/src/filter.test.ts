@@ -3,7 +3,7 @@ import type {
 	TableExpressionFilterDefinition,
 } from '@cognite/sdk';
 import { expect, describe, it } from 'vitest';
-import { __VIEWS, type __Schema } from './_mock';
+import { __VIEWS, type __Schema } from './__fixtures__/sample';
 import { Filter } from './filter';
 
 import { createHelpers } from './helpers';

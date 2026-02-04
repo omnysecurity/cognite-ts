@@ -182,6 +182,32 @@ function generateTypeForSchema(views: ViewDefinition[]) {
 	);
 }
 
+function generateTypeForSchemaAliases(views: ViewDefinition[]) {
+	const aliases = views.reduce((acc, view) => {
+		const viewId = getViewId(view);
+		for (const alias of [`${view.externalId}`, `${view.space}__${view.externalId}`]) {
+			const current = acc.get(alias);
+			if (current && current !== viewId) acc.set(alias, null);
+			else acc.set(alias, viewId);
+		}
+		return acc;
+	}, new Map<string, string | null>());
+
+	const properties = [...aliases.entries()]
+		.filter(([_, viewId]) => viewId !== null)
+		.toSorted(([a], [b]) => a.localeCompare(b))
+		.map(([alias, viewId]) => createProperty(
+			alias, ts.factory.createTypeReferenceNode(viewId!)
+		));
+
+	const intersectionType = ts.factory.createIntersectionTypeNode([
+		ts.factory.createTypeReferenceNode("__Schema"),
+		ts.factory.createTypeLiteralNode(properties)
+	]);
+
+	return createType("Schema", intersectionType);
+}
+
 export function generateTypescriptFile(
 	model: DataModel,
 	views: ViewDefinition[]
@@ -197,6 +223,7 @@ export function generateTypescriptFile(
 
 	const sourceNodes = ts.factory.createNodeArray([
 		generateTypeForSchema(views),
+		generateTypeForSchemaAliases(views),
 		...generateTypesForBuiltInViews(),
 		...generateTypesForViews(views),
 		createViewPropertyMap(views),
@@ -310,65 +337,13 @@ export const generate = (options: GenerateFileOptions) => {
 	const viewDefinitions = `
 const _VIEW_DEFINITIONS = ${JSON.stringify(
 		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId)),
-		null,
+		((key, value) => ["lastUpdatedTime", "createdTime"].includes(key) ? 0 : value),
 		2
 	)} as const;
 
 type _Expand<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 type _Mutable<T> = _Expand<{ -readonly [K in keyof T]: _Mutable<T[K]> }>;
 
-type _ViewReferenceCandidate<TSchema> = keyof TSchema extends infer K
-	? K extends \`\${infer S}__\${infer E}__\${infer V}\` // full
-		? \`\${S}__\${E}__\${V}\` | \`\${S}__\${E}\` | E
-		: K extends \`\${infer S}__\${infer E}\` // versioned
-			? \`\${S}__\${E}\` | E
-			: K // simple
-	: never;
-type _CollectMatches<
-	TSchema,
-	TRef extends _ViewReferenceCandidate<TSchema>,
-> = keyof TSchema extends infer K
-	? K extends keyof TSchema
-		? K extends \`\${infer S}__\${infer E}__\${infer V}\`
-			? TRef extends \`\${S}__\${E}__\${V}\` | \`\${S}__\${E}\` | E
-				? TSchema[K]
-				: never
-			: K extends \`\${infer S}__\${infer E}\`
-				? TRef extends \`\${S}__\${E}\` | E
-					? TSchema[K]
-					: never
-				: TRef extends K
-					? TSchema[K]
-					: never
-		: never
-	: never;
-type _IsUnion<T, U = T> = T extends any
-	? [U] extends [T]
-		? false
-		: true
-	: false;
-type _IsSingleValue<T> = [T] extends [never]
-	? unknown
-	: _IsUnion<T> extends true
-		? unknown
-		: T;
-type ResolveView<
-	TSchema,
-	TRef extends _ViewReferenceCandidate<TSchema>,
-> = _IsSingleValue<_CollectMatches<TSchema, TRef>>;
-type _UnambiguousViewReference<TSchema> =
-	Extract<_ViewReferenceCandidate<TSchema>, string> extends infer TRef extends
-		string
-		? TRef extends _ViewReferenceCandidate<TSchema>
-			? unknown extends ResolveView<TSchema, TRef>
-				? never
-				: TRef
-			: never
-		: never;
-
-export type Schema = {
-	[K in _UnambiguousViewReference<__Schema>]: _Expand<ResolveView<__Schema, K>>;
-};
 export const VIEW_DEFINITIONS = _VIEW_DEFINITIONS as _Mutable<
 	typeof _VIEW_DEFINITIONS
 >;	
