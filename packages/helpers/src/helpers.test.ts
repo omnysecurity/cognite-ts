@@ -8,11 +8,7 @@ import type {
 	ViewReference,
 } from '@cognite/sdk';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-	__VIEWS,
-	type TestView1,
-	type __Schema,
-} from './__fixtures__/minimal-schema';
+import { __VIEWS, type TestView1, type __Schema } from './__fixtures__/sample';
 import { VIEW_DEFINITIONS } from './__fixtures__/view-definitions';
 import { Filter } from './filter';
 import {
