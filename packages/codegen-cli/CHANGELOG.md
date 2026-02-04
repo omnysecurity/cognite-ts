@@ -1,5 +1,19 @@
 # @omnysecurity/cognite-codegen-cli
 
+## 0.3.0
+
+### Minor Changes
+
+- 9bf93b3: Codegen improvements
+  - statically resolve unambigious view references for better typescript performance
+  - set view definition system timestamps to zero to avoid unwanted diffs on schema re-generation
+
+### Patch Changes
+
+- 39b56f3: Remove unwanted console logging.
+- Updated dependencies [9bf93b3]
+  - @omnysecurity/cognite-codegen@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
