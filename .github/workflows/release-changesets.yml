@@ -14,6 +14,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
       pull-requests: write
@@ -35,6 +36,9 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: '10.12.0'
+
+      - name: Update npm
+        run: npm update -g npm # temporary until setup-node action comes with npm version that contains oidc setup by default
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -60,8 +64,8 @@ jobs:
           commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Use OIDC for npm authentication instead of NPM_TOKEN
-          NPM_TOKEN: '' # https://github.com/changesets/changesets/issues/1152#issuecomment-3190884868
+          NPM_TOKEN: '' # Required for OIDC - prevents changesets from erroring when no token is set
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Upload package artifacts
         if: steps.changesets.outputs.published == 'true'
