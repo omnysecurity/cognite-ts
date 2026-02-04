@@ -53,7 +53,7 @@ type Options = {
 	output?: string;
 };
 
-config();
+config({ quiet: true });
 
 const cli = meow(
 	`
