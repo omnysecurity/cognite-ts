@@ -12,7 +12,9 @@ import { getViewId, type ViewRef } from './types.js';
  * non-recursive pass. Callers that need the full transitive closure (i.e.
  * `resolveViews`) repeat the pass as newly-fetched views are added.
  */
-export function collectImplementsRefs(views: ViewDefinition[]): ViewReference[] {
+export function collectImplementsRefs(
+	views: ViewDefinition[]
+): ViewReference[] {
 	return views.flatMap((view) => view.implements ?? []);
 }
 

@@ -201,7 +201,10 @@ function generateTypeForSchema(views: ViewDefinition[]) {
 function generateTypeForSchemaAliases(views: ViewDefinition[]) {
 	const aliases = views.reduce((acc, view) => {
 		const viewId = getViewId(view);
-		for (const alias of [`${view.externalId}`, `${view.space}__${view.externalId}`]) {
+		for (const alias of [
+			`${view.externalId}`,
+			`${view.space}__${view.externalId}`,
+		]) {
 			const current = acc.get(alias);
 			if (current && current !== viewId) acc.set(alias, null);
 			else acc.set(alias, viewId);
@@ -212,16 +215,16 @@ function generateTypeForSchemaAliases(views: ViewDefinition[]) {
 	const properties = [...aliases.entries()]
 		.filter(([_, viewId]) => viewId !== null)
 		.toSorted(([a], [b]) => a.localeCompare(b))
-		.map(([alias, viewId]) => createProperty(
-			alias, ts.factory.createTypeReferenceNode(viewId!)
-		));
+		.map(([alias, viewId]) =>
+			createProperty(alias, ts.factory.createTypeReferenceNode(viewId!))
+		);
 
 	const intersectionType = ts.factory.createIntersectionTypeNode([
-		ts.factory.createTypeReferenceNode("__Schema"),
-		ts.factory.createTypeLiteralNode(properties)
+		ts.factory.createTypeReferenceNode('__Schema'),
+		ts.factory.createTypeLiteralNode(properties),
 	]);
 
-	return createType("Schema", intersectionType);
+	return createType('Schema', intersectionType);
 }
 
 export function generateTypescriptFile(
@@ -357,7 +360,8 @@ export const generate = (options: GenerateFileOptions) => {
 	const viewDefinitions = `
 const _VIEW_DEFINITIONS = ${JSON.stringify(
 		views,
-		((key, value) => ["lastUpdatedTime", "createdTime"].includes(key) ? 0 : value),
+		(key, value) =>
+			['lastUpdatedTime', 'createdTime'].includes(key) ? 0 : value,
 		2
 	)} as const;
 
