@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { writeFile } from 'fs/promises';
 import { CogniteClient } from '@cognite/sdk';
-import { generate } from '@omnysecurity/cognite-codegen';
+import { generate, resolveViews } from '@omnysecurity/cognite-codegen';
 import { config } from 'dotenv';
 import meow from 'meow';
 
@@ -25,19 +25,22 @@ export const main = async (options: Options) => {
 
 	if (!dataModel) throw new Error('Data model not found');
 
-	const viewIds = dataModel.views?.map((x) => ({
+	const viewRefs = dataModel.views?.map((x) => ({
 		space: x.space,
 		externalId: x.externalId,
 		version: x.version,
 	}));
-	if (!viewIds) throw new Error('No views found for data model');
+	if (!viewRefs) throw new Error('No views found for data model');
 
-	const views = await client.views.retrieve(viewIds);
-	views.items.sort((a, b) => a.externalId.localeCompare(b.externalId));
+	// The data model only lists its own views, but a view may `implement` a view
+	// that is not itself part of the model. `resolveViews` retrieves the listed
+	// views plus the transitive closure of everything they implement, so codegen
+	// never emits a dangling reference to an unresolved implemented view.
+	const views = await resolveViews(client, viewRefs);
 
 	const output = generate({
 		dataModel,
-		views: views.items,
+		views,
 	});
 
 	await writeFile(options.output ?? output.fileName, output.fileContent);

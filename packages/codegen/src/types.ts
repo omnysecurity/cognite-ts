@@ -1,5 +1,10 @@
 import type { ViewCorePropertyDefinition } from '@cognite/sdk';
 
+export type ViewRef = { space: string; externalId: string; version: string };
+
+export const getViewId = (view: ViewRef) =>
+	`${view.space}__${view.externalId}__${view.version}`;
+
 export interface EnumType {
 	type: 'enum';
 	values: Record<string, unknown>;

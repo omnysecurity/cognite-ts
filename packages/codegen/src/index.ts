@@ -5,64 +5,13 @@ import {
 	type DataModel,
 } from '@cognite/sdk';
 import ts from 'typescript';
-import { type ExtendedViewCorePropertyDefinition } from './types.js';
+import {
+	type ExtendedViewCorePropertyDefinition,
+	type ViewRef,
+	getViewId,
+} from './types.js';
 
-type ViewRef = { space: string; externalId: string; version: string };
-const getViewId = (view: ViewRef) =>
-	`${view.space}__${view.externalId}__${view.version}`;
-
-function resolveTypeNode(
-	propSpec: ExtendedViewCorePropertyDefinition
-): ts.TypeNode {
-	if ('list' in propSpec.type) {
-		if (propSpec.type.list) {
-			const typeNode = resolveTypeNode({
-				...propSpec,
-				type: { ...propSpec.type, list: false },
-			});
-			return ts.factory.createArrayTypeNode(typeNode);
-		}
-	}
-	switch (propSpec.type.type) {
-		case 'boolean':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
-		case 'float32':
-		case 'float64':
-		case 'int32':
-		case 'int64':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
-		case 'timestamp':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
-		case 'date':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
-		case 'text':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
-		case 'json':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
-		case 'direct':
-			return ts.factory.createTypeReferenceNode(
-				`DirectReference<${propSpec.type.source ? getViewId(propSpec.type.source) : 'unknown'}>`
-			);
-		case 'enum':
-			if (propSpec.type.values) {
-				const enumKeys = Object.keys(propSpec.type.values);
-
-				// Create a union type from the enum keys
-				const unionTypeNodes = enumKeys.map((key) =>
-					ts.factory.createLiteralTypeNode(ts.factory.createStringLiteral(key))
-				);
-
-				return ts.factory.createUnionTypeNode(unionTypeNodes);
-			}
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
-		case 'file':
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
-		case 'sequence':
-		case 'timeseries':
-		default:
-			return ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
-	}
-}
+export { resolveViews } from './resolve.js';
 
 function isPropertyDefinition(
 	prop: ViewDefinitionProperty
@@ -120,53 +69,120 @@ function nullishFilter<T>(element: T | null | undefined): element is T {
 }
 
 function generateTypesForViews(views: ViewDefinition[]) {
-	return views.flatMap(generateTypeForView);
-}
+	// The set of view ids being generated in this run. A direct/connection
+	// property whose source view is not in this set degrades to an `unknown`
+	// generic rather than emitting a dangling type reference. Derived here so it
+	// stays lexically available to the closures below without threading it
+	// through every signature.
+	const knownViewIds = new Set(views.map(getViewId));
 
-// Function to generate TypeScript AST from the spec
-function generateTypeForView(spec: ViewDefinition) {
-	const members = Object.entries(spec.properties)
-		.map(([propName, propSpec]) => {
-			if (
-				isPropertyDefinition(propSpec) &&
-				propSpec.container.space == spec.space &&
-				propSpec.container.externalId == spec.externalId
-			) {
-				return ts.factory.createPropertySignature(
-					undefined,
-					propName,
-					(propSpec as unknown as Record<string, boolean>)['nullable']
-						? ts.factory.createToken(ts.SyntaxKind.QuestionToken)
-						: undefined,
-					resolveTypeNode(propSpec)
-				);
-			} else {
-				// TODO: Direct relation-types are not exported in the SDK :shrug:
+	const resolveViewIdReference = (source: ViewRef | undefined) =>
+		source && knownViewIds.has(getViewId(source))
+			? getViewId(source)
+			: 'unknown';
+
+	const resolveTypeNode = (
+		propSpec: ExtendedViewCorePropertyDefinition
+	): ts.TypeNode => {
+		if ('list' in propSpec.type) {
+			if (propSpec.type.list) {
+				const typeNode = resolveTypeNode({
+					...propSpec,
+					type: { ...propSpec.type, list: false },
+				});
+				return ts.factory.createArrayTypeNode(typeNode);
 			}
-			return undefined;
-		})
-		.filter(nullishFilter);
+		}
+		switch (propSpec.type.type) {
+			case 'boolean':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
+			case 'float32':
+			case 'float64':
+			case 'int32':
+			case 'int64':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
+			case 'timestamp':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+			case 'date':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+			case 'text':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+			case 'json':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.ObjectKeyword);
+			case 'direct':
+				return ts.factory.createTypeReferenceNode(
+					`DirectReference<${resolveViewIdReference(propSpec.type.source)}>`
+				);
+			case 'enum':
+				if (propSpec.type.values) {
+					const enumKeys = Object.keys(propSpec.type.values);
 
-	const typeLiteral = ts.factory.createTypeLiteralNode(members);
-	const typeExtends = (spec.implements ?? []).map((view) =>
-		ts.factory.createTypeReferenceNode(getViewId(view), undefined)
-	);
-	const typeNode = ts.factory.createIntersectionTypeNode([
-		typeLiteral,
-		...typeExtends,
-	]);
+					// Create a union type from the enum keys
+					const unionTypeNodes = enumKeys.map((key) =>
+						ts.factory.createLiteralTypeNode(
+							ts.factory.createStringLiteral(key)
+						)
+					);
 
-	return [
-		ts.factory.createJSDocComment(spec.description),
-		ts.factory.createTypeAliasDeclaration(
-			ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
-			ts.factory.createIdentifier(getViewId(spec)),
-			undefined,
-			typeNode // ts.factory.createTypeLiteralNode(members.filter(Boolean))
-		),
+					return ts.factory.createUnionTypeNode(unionTypeNodes);
+				}
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+			case 'file':
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
+			case 'sequence':
+			case 'timeseries':
+			default:
+				return ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
+		}
+	};
 
-		// generate a string literal const value `as const` for the type
-	];
+	// Function to generate TypeScript AST from the spec
+	const generateTypeForView = (spec: ViewDefinition) => {
+		const members = Object.entries(spec.properties)
+			.map(([propName, propSpec]) => {
+				if (
+					isPropertyDefinition(propSpec) &&
+					propSpec.container.space == spec.space &&
+					propSpec.container.externalId == spec.externalId
+				) {
+					return ts.factory.createPropertySignature(
+						undefined,
+						propName,
+						(propSpec as unknown as Record<string, boolean>)['nullable']
+							? ts.factory.createToken(ts.SyntaxKind.QuestionToken)
+							: undefined,
+						resolveTypeNode(propSpec)
+					);
+				} else {
+					// TODO: Direct relation-types are not exported in the SDK :shrug:
+				}
+				return undefined;
+			})
+			.filter(nullishFilter);
+
+		const typeLiteral = ts.factory.createTypeLiteralNode(members);
+		const typeExtends = (spec.implements ?? []).map((view) =>
+			ts.factory.createTypeReferenceNode(getViewId(view), undefined)
+		);
+		const typeNode = ts.factory.createIntersectionTypeNode([
+			typeLiteral,
+			...typeExtends,
+		]);
+
+		return [
+			ts.factory.createJSDocComment(spec.description),
+			ts.factory.createTypeAliasDeclaration(
+				ts.factory.createModifiersFromModifierFlags(ts.ModifierFlags.Export),
+				ts.factory.createIdentifier(getViewId(spec)),
+				undefined,
+				typeNode // ts.factory.createTypeLiteralNode(members.filter(Boolean))
+			),
+
+			// generate a string literal const value `as const` for the type
+		];
+	};
+
+	return views.flatMap(generateTypeForView);
 }
 
 function generateTypeForSchema(views: ViewDefinition[]) {
@@ -325,9 +341,13 @@ type GenerateFileOptions = {
 };
 
 export const generate = (options: GenerateFileOptions) => {
+	const views = [...options.views].sort((a, b) =>
+		getViewId(a).localeCompare(getViewId(b))
+	);
+
 	const typescriptFileContents = generateTypescriptFile(
 		options.dataModel,
-		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId))
+		views
 	);
 	const disclaimer = `/*
  * This file was generated by @omnysec/cognite-codegen.
@@ -336,7 +356,7 @@ export const generate = (options: GenerateFileOptions) => {
 
 	const viewDefinitions = `
 const _VIEW_DEFINITIONS = ${JSON.stringify(
-		[...options.views].sort((a, b) => a.externalId.localeCompare(b.externalId)),
+		views,
 		((key, value) => ["lastUpdatedTime", "createdTime"].includes(key) ? 0 : value),
 		2
 	)} as const;
